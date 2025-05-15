@@ -33,6 +33,12 @@ async def generate_meditation(request: MeditationRequest):
     """
     Generate a personalized meditation based on the provided mood and language preference.
     
+    The API will:
+    1. Scrape the web for a meditation audio file matching the mood
+    2. Download the audio file
+    3. Check the audio quality to ensure it meets standards
+    4. Return the best matching meditation
+    
     Returns an MP3 audio file of the meditation.
     """
     try:

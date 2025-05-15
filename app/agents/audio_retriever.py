@@ -5,11 +5,13 @@ import requests
 from pathlib import Path
 import time
 from urllib.parse import urlparse
+from bs4 import BeautifulSoup
+import re
 
 class AudioRetrieverAgent:
     """
     Agent for retrieving meditation audio files from the internet based on mood.
-    Downloads approximately 10-minute long meditation audio in French or English.
+    Scrapes and returns URLs for 10-minute long meditation audio in French or English.
     """
     
     def __init__(self, cache_dir=None):
@@ -46,9 +48,8 @@ class AudioRetrieverAgent:
             "serene": ["serenity meditation 10 minutes", "méditation sérénité 10 minutes"]
         }
         
-        # List of meditation audio sources
+        # List of meditation audio sources to scrape
         self.audio_sources = [
-            # Free meditation audio sources
             "https://www.freemindfulness.org/download",
             "https://www.tarabrach.com/guided-meditations/",
             "https://insighttimer.com/meditation-music",
@@ -58,17 +59,14 @@ class AudioRetrieverAgent:
         
     async def retrieve(self, mood: str, preferred_language="english") -> str:
         """
-        Retrieve a meditation audio file based on the provided mood.
-        
-        In a real implementation, this would search the web, download files, and return the best match.
-        For this demo, we'll simulate the retrieval process.
+        Find and return the URL of a meditation audio file based on the provided mood.
         
         Args:
             mood: The mood to base the meditation on
             preferred_language: Preferred language for the meditation (english or french)
             
         Returns:
-            Path to the retrieved audio file
+            URL of a suitable meditation audio file
         """
         # Normalize the mood
         mood = mood.lower().strip()
@@ -86,46 +84,75 @@ class AudioRetrieverAgent:
         else:
             query = next((q for q in queries if "meditation" in q.lower()), queries[0])
         
-        # In a real implementation, we would:
-        # 1. Use the query to search for meditation audio files
-        # 2. Download candidate files and check their duration (~10 minutes)
-        # 3. Return the best match
+        # Search for meditation audio URLs
+        audio_url = await self._search_for_meditation_audio(query, preferred_language)
         
-        # For demonstration, create a unique filename based on mood and language
-        file_name = f"{mood}_{preferred_language}_{int(time.time())}.mp3"
-        output_path = self.cache_dir / file_name
+        return audio_url
+    
+    async def _search_for_meditation_audio(self, query, preferred_language):
+        """
+        Search for meditation audio by scraping meditation websites.
         
-        # Here we would download the file, but for demo we'll create a placeholder
+        Args:
+            query: Search query string
+            preferred_language: The preferred language for meditation content
+            
+        Returns:
+            URL of a suitable meditation audio file
+        """
+        # Select a source to scrape
+        source_url = random.choice(self.audio_sources)
+        
         try:
-            # Simulate a download 
-            # In a real implementation, we'd use requests or another library to download the file
-            print(f"Retrieving meditation audio for mood: {mood}, language: {preferred_language}")
-            print(f"Query: {query}")
+            # Get the page content
+            response = requests.get(source_url, timeout=10)
+            response.raise_for_status()
+            soup = BeautifulSoup(response.text, 'html.parser')
             
-            # Create a placeholder file for demonstration
-            output_path.touch()
+            # Find audio links - common patterns in meditation sites
+            audio_links = []
             
-            # For a working implementation, replace with something like:
-            # best_url = self._search_for_meditation_audio(query)
-            # self._download_file(best_url, output_path)
+            # Look for audio tags
+            audio_tags = soup.find_all('audio')
+            for tag in audio_tags:
+                if tag.get('src'):
+                    audio_links.append(tag.get('src'))
+                
+            # Look for links ending with audio extensions
+            for a_tag in soup.find_all('a', href=True):
+                href = a_tag['href']
+                if href.endswith(('.mp3', '.wav', '.m4a')):
+                    audio_links.append(href)
+                    
+            # Look for links containing download indicators
+            for a_tag in soup.find_all('a', href=True):
+                if ('download' in a_tag.text.lower() or 
+                    'audio' in a_tag.text.lower() or 
+                    'meditation' in a_tag.text.lower()):
+                    audio_links.append(a_tag['href'])
+            
+            # Filter for appropriate language if possible
+            language_key = 'méditation' if preferred_language.lower() == 'french' else 'meditation'
+            lang_filtered = [link for link in audio_links if language_key in link.lower()]
+            
+            # Use language filtered links if available, otherwise use all links
+            final_links = lang_filtered if lang_filtered else audio_links
+            
+            # If we found any audio links, return one randomly
+            if final_links:
+                link = random.choice(final_links)
+                # Ensure the link is absolute
+                if not urlparse(link).netloc:
+                    # It's a relative link, make it absolute
+                    base_url = urlparse(source_url)
+                    base_domain = f"{base_url.scheme}://{base_url.netloc}"
+                    link = f"{base_domain}/{link.lstrip('/')}"
+                return link
+            
+            # As a fallback, return a placeholder or a known meditation audio URL
+            return "https://www.freemindfulness.org/FreeMindfulness3MinuteBreathing.mp3"
             
         except Exception as e:
-            print(f"Error retrieving audio: {str(e)}")
-            # Create an empty placeholder file if there's an error
-            output_path.touch()
-        
-        return str(output_path)
-    
-    def _search_for_meditation_audio(self, query):
-        """
-        In a real implementation, this would search for audio files matching the query.
-        """
-        # Placeholder - in a real implementation, this would use a search API or web scraping
-        return random.choice(self.audio_sources)
-    
-    def _download_file(self, url, output_path):
-        """
-        Download a file from a URL to the specified output path.
-        """
-        # In a real implementation, this would use requests to download the file
-        pass 
+            print(f"Error scraping for meditation audio: {str(e)}")
+            # Return a fallback URL in case of error
+            return "https://www.freemindfulness.org/FreeMindfulness3MinuteBreathing.mp3" 

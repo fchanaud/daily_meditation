@@ -15,12 +15,15 @@ def setup_dev_environment():
     project_root = Path(__file__).resolve().parent
     sys.path.append(str(project_root))
     
-    # Import the placeholder creators
-    from app.utils.create_sound_placeholders import create_sound_placeholders
-    from app.utils.create_audio_placeholders import create_audio_placeholders
+    # Create necessary directories
+    print("Creating necessary directories...")
+    assets_dir = project_root / "app" / "assets"
+    cached_audio_dir = assets_dir / "cached_audio"
     
-    # Create placeholder ambient sound files
-    create_sound_placeholders()
+    os.makedirs(cached_audio_dir, exist_ok=True)
+    
+    # Import the placeholder creator
+    from app.utils.create_audio_placeholders import create_audio_placeholders
     
     # Create placeholder cached audio files
     create_audio_placeholders()

@@ -13,6 +13,10 @@ source venv/bin/activate
 echo "Installing dependencies..."
 pip install -r requirements.txt
 
+# Create necessary directories
+echo "Setting up directories..."
+mkdir -p app/assets/cached_audio
+
 # Run the application
 echo "Starting Daily Meditation API server..."
 uvicorn app.api.app:app --host 0.0.0.0 --port 8000 --reload 

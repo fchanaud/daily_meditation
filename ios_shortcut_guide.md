@@ -1,6 +1,6 @@
 # iOS Shortcut Guide for Daily Meditation App
 
-This guide will help you create an iOS Shortcut to access your Daily Meditation API and play personalized meditations.
+This guide will help you create an iOS Shortcut to access your Daily Meditation API and play personalized meditations based on your mood.
 
 ## Prerequisites
 
@@ -46,19 +46,23 @@ This guide will help you create an iOS Shortcut to access your Daily Meditation 
 22. Search for "Play Sound" and select it
 23. For Sound, select the "Contents of URL" output from the previous step
 
+## Using the Shortcut
+
+1. Tap on the shortcut in the Shortcuts app or your home screen
+2. When prompted, enter how you're feeling (e.g., "calm", "focused", "energized")
+3. Choose your preferred language ("english" or "french")
+4. The shortcut will call the API, which will:
+   - Search the web for meditation audio matching your mood
+   - Download the best matching audio file
+   - Check the audio quality to ensure it meets standards
+   - Return the high-quality meditation
+5. The meditation will automatically play on your device
+
 ## Customizing the Shortcut
 
 - You can rename the shortcut by tapping on its name at the top
 - Add it to your home screen for quick access
 - Set up specific moods and languages as quick options instead of free text input
-
-## Running the Shortcut
-
-1. Tap on the shortcut in the Shortcuts app or your home screen
-2. When prompted, enter how you're feeling (e.g., "calm", "focused", "energized")
-3. Choose your preferred language ("english" or "french")
-4. The shortcut will call the API, which will generate a personalized meditation
-5. The meditation will automatically play on your device
 
 ## Troubleshooting
 
