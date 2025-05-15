@@ -22,39 +22,49 @@ This guide will help you create an iOS Shortcut to access your Daily Meditation 
    - Input Type: "Text"
    - Default Answer: "calm" (or leave blank)
 9. Add another action by tapping "+"
-10. Search for "Dictionary" and select "Dictionary" action
-11. Add a key-value pair:
-    - Key: `mood`
-    - Text: Select the "Provided Input" variable from the previous step
+10. Search for "Ask for Input" and select it again
+11. Configure this input as follows:
+    - Question: "Choose a language (english/french)"
+    - Input Type: "Text"
+    - Default Answer: "english"
 12. Add another action by tapping "+"
-13. Search for "Get Contents of URL" and select it
-14. For URL, select the Text variable from step 5
-15. For Method, select "POST"
-16. For Request Body, select "JSON" and use the Dictionary variable from step 11
-17. For Headers, add a key-value pair:
+13. Search for "Dictionary" and select "Dictionary" action
+14. Add two key-value pairs:
+    - Key: `mood`
+    - Text: Select the "Provided Input" variable from step 8
+    - Key: `language`
+    - Text: Select the "Provided Input" variable from step 11
+15. Add another action by tapping "+"
+16. Search for "Get Contents of URL" and select it
+17. For URL, select the Text variable from step 5
+18. For Method, select "POST"
+19. For Request Body, select "JSON" and use the Dictionary variable from step 14
+20. For Headers, add a key-value pair:
     - Key: `Content-Type`
     - Value: `application/json`
-18. Add another action by tapping "+"
-19. Search for "Play Sound" and select it
-20. For Sound, select the "Contents of URL" output from the previous step
+21. Add another action by tapping "+"
+22. Search for "Play Sound" and select it
+23. For Sound, select the "Contents of URL" output from the previous step
 
 ## Customizing the Shortcut
 
 - You can rename the shortcut by tapping on its name at the top
 - Add it to your home screen for quick access
-- Set up specific moods as quick options instead of free text input
+- Set up specific moods and languages as quick options instead of free text input
 
 ## Running the Shortcut
 
 1. Tap on the shortcut in the Shortcuts app or your home screen
 2. When prompted, enter how you're feeling (e.g., "calm", "focused", "energized")
-3. The shortcut will call the API, which will generate a personalized meditation
-4. The meditation will automatically play on your device
+3. Choose your preferred language ("english" or "french")
+4. The shortcut will call the API, which will generate a personalized meditation
+5. The meditation will automatically play on your device
 
 ## Troubleshooting
 
 - If you receive an error, check that your API is running and accessible
 - Ensure your mood input is one of the supported moods (refer to the `/available-moods` endpoint)
+- Ensure your language input is one of the supported languages (refer to the `/available-languages` endpoint)
 - Check your internet connection
 
 ## Advanced Usage

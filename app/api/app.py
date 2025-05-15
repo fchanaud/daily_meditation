@@ -22,6 +22,7 @@ app.add_middleware(
 
 class MeditationRequest(BaseModel):
     mood: str
+    language: str = "english"  # Default to English if not specified
     
 @app.get("/")
 async def root():
@@ -30,19 +31,23 @@ async def root():
 @app.post("/generate-meditation")
 async def generate_meditation(request: MeditationRequest):
     """
-    Generate a personalized meditation based on the provided mood.
+    Generate a personalized meditation based on the provided mood and language preference.
     
     Returns an MP3 audio file of the meditation.
     """
     try:
-        orchestrator = MeditationOrchestrator()
+        orchestrator = MeditationOrchestrator(language=request.language)
         
         # Create a temporary file to store the meditation
         with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as temp_file:
             temp_path = temp_file.name
         
         # Generate the meditation
-        meditation_path = await orchestrator.generate_meditation(request.mood, output_path=temp_path)
+        meditation_path = await orchestrator.generate_meditation(
+            request.mood, 
+            language=request.language,
+            output_path=temp_path
+        )
         
         # Read the meditation file
         with open(meditation_path, "rb") as f:
@@ -56,7 +61,7 @@ async def generate_meditation(request: MeditationRequest):
             content=audio_data,
             media_type="audio/mpeg",
             headers={
-                "Content-Disposition": f'attachment; filename="meditation_{request.mood}.mp3"'
+                "Content-Disposition": f'attachment; filename="meditation_{request.mood}_{request.language}.mp3"'
             }
         )
     except Exception as e:
@@ -72,4 +77,12 @@ async def available_moods():
         "happy", "peaceful", "confident", "creative", "compassionate",
         "mindful", "balanced", "resilient", "hopeful", "serene"
     ]
-    return {"moods": moods} 
+    return {"moods": moods}
+
+@app.get("/available-languages")
+async def available_languages():
+    """
+    Get the list of available languages for meditation audio.
+    """
+    languages = ["english", "french"]
+    return {"languages": languages} 
