@@ -1,12 +1,40 @@
-# Python
+# Python virtual environment
+venv/
+.venv/
+env/
 __pycache__/
 *.py[cod]
 *$py.class
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Local development settings
+.env
+.env.local
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# Cached audio files
+app/assets/cached_audio/
+
+# Logs
+*.log
+
+# Python
 *.so
 .Python
-build/
 develop-eggs/
-dist/
 downloads/
 eggs/
 .eggs/
@@ -16,33 +44,5 @@ parts/
 sdist/
 var/
 wheels/
-*.egg-info/
 .installed.cfg
-*.egg
-
-# Virtual Environment
-venv/
-ENV/
-env/
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# Logs
-*.log
-
-# Local development settings
-.env
-.env.local
-
-# Generated files
-app/assets/cached_audio/*
-!app/assets/cached_audio/.gitkeep
-test_meditation_*.mp3
-
-# OS specific
-.DS_Store
-Thumbs.db 
+*.egg 
