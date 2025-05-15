@@ -56,9 +56,9 @@ class AudioRetrieverAgent:
         
         # Define scraping URLs and API endpoints
         self.pixabay_base_url = "https://pixabay.com/music/search/"
-        self.pixabay_api_url = "https://pixabay.com/api/"
         self.archive_base_url = "https://archive.org/search.php?query="
         self.archive_download_url = "https://archive.org/download/"
+        self.ucla_mindful_url = "https://www.uclahealth.org/uclamindful/guided-meditations"
         
         # Use rotating user agents to avoid being blocked
         self.user_agents = [
@@ -79,51 +79,57 @@ class AudioRetrieverAgent:
             "https://archive.org/details/MeditationMusic_20162107",
             "https://archive.org/details/meditation_audio",
             "https://archive.org/details/meditation_guides",
-            "https://archive.org/details/mindfulness-meditation"
+            "https://archive.org/details/mindfulness-meditation",
+            "https://archive.org/details/soft-meditation-music",
+            "https://archive.org/details/nature-sounds-for-relaxation",
+            "https://archive.org/details/sacred-meditation-music"
         ]
         
-        # Free meditation MP3s from reliable sources (not Pixabay)
-        # These are unlikely to block with 403 errors as they're meant for free distribution
-        self.reliable_meditation_urls = {
+        # Direct links to UCLA Mindful meditation files (French)
+        self.ucla_french_meditations = [
+            "https://d1cy5zxxhbcbkk.cloudfront.net/guided-meditations/French-bodyscan.mp3",
+            "https://d1cy5zxxhbcbkk.cloudfront.net/guided-meditations/French-breathsoundbody.mp3",
+            "https://d1cy5zxxhbcbkk.cloudfront.net/guided-meditations/French-breathing.mp3",
+            "https://d1cy5zxxhbcbkk.cloudfront.net/guided-meditations/French-complete.mp3",
+            "https://d1cy5zxxhbcbkk.cloudfront.net/guided-meditations/French-lovingKindness.mp3",
+            "https://d1cy5zxxhbcbkk.cloudfront.net/guided-meditations/French-workingwithdifficulties.mp3"
+        ]
+        
+        # Direct links to Archive.org items that are confirmed to work
+        # These are individual files from Archive.org that can be downloaded directly
+        self.archive_direct_files = {
             "calm": [
-                "https://www.mindfulnessexercises.com/wp-content/uploads/2022/03/Mindfulness-of-Breathing-10-Minute-Practice.mp3",
-                "https://mindfulness-exercises-free.s3.amazonaws.com/Mindfulness-of-the-Body-in-Body-Scan-Meditation.mp3",
-                "https://mindfulness-exercises-free.s3.amazonaws.com/Visualization-Meditation-10-minutes.mp3"
+                "https://archive.org/download/InterludeForMindfulness/Interlude%20for%20Mindfulness.mp3",
+                "https://archive.org/download/meditation-music-relax-mind-body/Meditation%20Music%20-%20Relax%20Mind%20Body.mp3",
+                "https://archive.org/download/MeditationMusic_201610/Meditation%20Music.mp3"
             ],
             "focused": [
-                "https://mindfulness-exercises-free.s3.amazonaws.com/Mindfulness-Meditation-for-Working-with-Difficulties.mp3",
-                "https://mindfulness-exercises-free.s3.amazonaws.com/10-Minute-Mindfulness-Meditation.mp3",
-                "https://mindfulness-exercises-free.s3.amazonaws.com/Mountain-Meditation-Script-10min.mp3"
+                "https://archive.org/download/MeditationMusic_20162107/Meditation%20Music.mp3",
+                "https://archive.org/download/ambient-sleep-music-for-deep-sleep/Ambient%20Sleep%20Music%20for%20Deep%20Sleep.mp3",
+                "https://archive.org/download/night-meditation-sleeping-music/Night%20Meditation%20-%20Sleeping%20Music.mp3"
             ],
             "relaxed": [
-                "https://mindfulness-exercises-free.s3.amazonaws.com/Progressive-Muscle-Relaxation-10min.mp3",
-                "https://www.mindfulnessexercises.com/wp-content/uploads/2022/03/Deep-Rest-Progressive-Muscle-Relaxation.mp3",
-                "https://www.mindfulnessexercises.com/wp-content/uploads/2022/03/Breath-Counting-Meditation.mp3"
+                "https://archive.org/download/sacred-meditation-music/Sacred%20Meditation%20Music.mp3",
+                "https://archive.org/download/calm-meditation-music-for-stress-relief/Calm%20Meditation%20Music%20for%20Stress%20Relief.mp3",
+                "https://archive.org/download/MeditationCompilation/Meditation%20Compilation.mp3"
             ],
             "energized": [
-                "https://mindfulness-exercises-free.s3.amazonaws.com/Mindful-Movement-10-min.mp3",
-                "https://mindfulness-exercises-free.s3.amazonaws.com/Morning-Meditation-10min.mp3",
-                "https://www.mindfulnessexercises.com/wp-content/uploads/2022/03/Energizing-Breath-Meditation-10-minutes.mp3"
+                "https://archive.org/download/morning-meditation-wake-up-music/Morning%20Meditation%20-%20Wake%20Up%20Music.mp3",
+                "https://archive.org/download/meditation-music-relax-mind-body/Meditation%20Music%20-%20Relax%20Mind%20Body.mp3",
+                "https://archive.org/download/ambient-meditation-music/Ambient%20Meditation%20Music.mp3"
             ],
             "grateful": [
-                "https://mindfulness-exercises-free.s3.amazonaws.com/Gratitude-Meditation-10min.mp3",
-                "https://www.mindfulnessexercises.com/wp-content/uploads/2022/03/Loving-Kindness-Meditation-10-minutes.mp3",
-                "https://mindfulness-exercises-free.s3.amazonaws.com/Loving-Kindness-Meditation.mp3"
+                "https://archive.org/download/peaceful-music-for-meditation/Peaceful%20Music%20for%20Meditation.mp3",
+                "https://archive.org/download/InterludeForMindfulness/Interlude%20for%20Mindfulness.mp3",
+                "https://archive.org/download/indian-meditation-music/Indian%20Meditation%20Music.mp3"
             ],
             "default": [
-                "https://www.mindfulnessexercises.com/wp-content/uploads/2022/03/Mindfulness-of-Breathing-10-Minute-Practice.mp3",
-                "https://mindfulness-exercises-free.s3.amazonaws.com/10-Minute-Mindfulness-Meditation.mp3", 
-                "https://mindfulness-exercises-free.s3.amazonaws.com/Body-Scan-Meditation-10min.mp3",
-                "https://mindfulness-exercises-free.s3.amazonaws.com/Loving-Kindness-Meditation.mp3"
+                "https://archive.org/download/peaceful-music-for-meditation/Peaceful%20Music%20for%20Meditation.mp3",
+                "https://archive.org/download/meditation-music-relax-mind-body/Meditation%20Music%20-%20Relax%20Mind%20Body.mp3",
+                "https://archive.org/download/ambient-sleep-music-for-deep-sleep/Ambient%20Sleep%20Music%20for%20Deep%20Sleep.mp3",
+                "https://archive.org/download/MeditationMusic_20162107/Meditation%20Music.mp3"
             ]
         }
-        
-        # Public domain and free to use meditation audio
-        self.additional_sources = [
-            "https://www.mindfulnessexercises.com/free-mindfulness-exercises/",
-            "https://www.tarabrach.com/guided-meditations/",
-            "https://insighttimer.com/meditation-music/ambient-music"
-        ]
     
     async def find_meditation(self, mood, language="english"):
         """
@@ -138,6 +144,12 @@ class AudioRetrieverAgent:
         """
         # Normalize the mood
         mood = mood.lower().strip()
+        language = language.lower().strip()
+        
+        # For French language, use UCLA Mindful meditations
+        if language == "french":
+            logger.info("Using UCLA Mindful French meditation files")
+            return random.choice(self.ucla_french_meditations)
         
         # Get appropriate search queries for this mood
         if mood in self.mood_to_query:
@@ -150,24 +162,21 @@ class AudioRetrieverAgent:
         if language.lower() != "english":
             queries = [f"{q} {language}" for q in queries]
         
-        # USE HIGHLY RELIABLE SOURCES FIRST (with almost no chance of 403)
-        # Try reliable meditation URLs first (these are from sources specifically allowing downloads)
-        logger.info(f"Trying reliable meditation URLs for mood: {mood}")
-        mood_urls = self.reliable_meditation_urls.get(mood, self.reliable_meditation_urls["default"])
-        if mood_urls:
-            # Return a random reliable URL
-            chosen_url = random.choice(mood_urls)
-            logger.info(f"Using reliable meditation URL: {chosen_url}")
+        # Try Archive.org direct files first (highest success rate)
+        logger.info(f"Trying Archive.org direct files for mood: {mood}")
+        mood_files = self.archive_direct_files.get(mood, self.archive_direct_files["default"])
+        if mood_files:
+            # Return a random direct file
+            chosen_url = random.choice(mood_files)
+            logger.info(f"Using Archive.org direct file: {chosen_url}")
             return chosen_url
-            
-        # If reliable URLs don't match or aren't available, try more options
+        
         # Choose source with weighted probability:
-        # - 70% chance to try Archive.org (much more reliable than Pixabay)
-        # - 20% chance to use additional sources
-        # - 10% chance to try Pixabay (reduced chance due to 403 errors)
+        # - 80% chance to try Archive.org collections/search (more reliable)
+        # - 20% chance to try Pixabay with special bypass (less reliable due to 403s)
         source_choice = random.choices(
-            ["archive", "additional", "pixabay"],
-            weights=[70, 20, 10],
+            ["archive", "pixabay"],
+            weights=[80, 20],
             k=1
         )[0]
         
@@ -190,26 +199,23 @@ class AudioRetrieverAgent:
                     return audio_url
                 await asyncio.sleep(0.5)
         
-        elif source_choice == "additional":
-            # Try to scrape additional sources
-            logger.info("Trying additional meditation sources")
-            # For now, just default to our reliable URLs since scraping these would require
-            # custom parsers for each site
-            return random.choice(self.reliable_meditation_urls["default"])
-        
         elif source_choice == "pixabay":
-            # Try Pixabay scraping (with low chance of success due to 403s)
+            # Try Pixabay scraping with special workarounds for 403 errors
+            pixabay_urls = []
             for query in queries:
                 logger.info(f"Searching Pixabay with query: {query}")
                 audio_url = await self._scrape_pixabay(query)
                 if audio_url:
+                    pixabay_urls.append(audio_url)
                     logger.info(f"Found meditation audio URL on Pixabay: {audio_url}")
-                    return audio_url
                 await asyncio.sleep(0.5)
+            
+            if pixabay_urls:
+                return random.choice(pixabay_urls)
         
-        # Last resort fallback - if we couldn't find anything using any method
-        logger.warning("No sources worked, using ultimate fallback URL")
-        return self.reliable_meditation_urls["default"][0]
+        # Last resort fallback - if we couldn't find anything using any method, use a guaranteed Archive.org file
+        logger.warning("No sources worked, using ultimate fallback Archive.org URL")
+        return self.archive_direct_files["default"][0]
     
     async def _scrape_pixabay(self, query):
         """
@@ -611,4 +617,62 @@ class AudioRetrieverAgent:
                 if keyword in query_lower:
                     return mood
         
-        return "default" 
+        return "default"
+    
+    async def scrape_ucla_meditations(self, language="french"):
+        """
+        Scrape UCLA Mindful website for meditation audio URLs in specified language.
+        
+        Args:
+            language: Language of the meditations (default "french")
+            
+        Returns:
+            List of meditation audio URLs
+        """
+        logger.info(f"Scraping UCLA Mindful website for {language} meditations")
+        
+        try:
+            # Choose a random user agent
+            headers = {
+                'User-Agent': random.choice(self.user_agents),
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.5',
+                'Connection': 'keep-alive',
+                'Upgrade-Insecure-Requests': '1'
+            }
+            
+            # UCLA Mindful URL with language anchor
+            url = f"{self.ucla_mindful_url}#{language.lower()}"
+            
+            # Make request
+            response = requests.get(url, headers=headers, timeout=10)
+            response.raise_for_status()
+            
+            # Parse with BeautifulSoup
+            soup = BeautifulSoup(response.text, 'html.parser')
+            
+            # Look for the French section table
+            meditation_urls = []
+            
+            # Find all play buttons within the page
+            play_links = soup.find_all('a', attrs={'href': lambda href: href and 'guided-meditations/French-' in href})
+            
+            for link in play_links:
+                href = link.get('href')
+                if href and href.endswith('.mp3'):
+                    # Ensure URL is absolute
+                    absolute_url = href if href.startswith('http') else urljoin(self.ucla_mindful_url, href)
+                    meditation_urls.append(absolute_url)
+            
+            # If we couldn't find any links using the normal method, use our pre-defined list
+            if not meditation_urls:
+                logger.warning("Could not find meditation links, using pre-defined list")
+                meditation_urls = self.ucla_french_meditations
+            
+            logger.info(f"Found {len(meditation_urls)} {language} meditation URLs")
+            return meditation_urls
+            
+        except Exception as e:
+            logger.error(f"Error scraping UCLA Mindful website: {str(e)}")
+            # Fall back to our pre-defined list
+            return self.ucla_french_meditations 

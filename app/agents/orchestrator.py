@@ -184,8 +184,14 @@ class MeditationOrchestrator:
             if final_audio_path is None or os.path.getsize(final_audio_path) < 10240:
                 logger.warning("Attempting one last guaranteed fallback URL")
                 try:
-                    # Use a guaranteed working meditation URL from mindfulnessexercises.com
-                    fallback_url = "https://mindfulness-exercises-free.s3.amazonaws.com/Body-Scan-Meditation-10min.mp3"
+                    # Use a guaranteed working meditation URL from Archive.org or UCLA (for French)
+                    if language and language.lower() == "french":
+                        fallback_url = "https://d1cy5zxxhbcbkk.cloudfront.net/guided-meditations/French-breathing.mp3"
+                        logger.info("Using UCLA French meditation as fallback")
+                    else:
+                        fallback_url = "https://archive.org/download/peaceful-music-for-meditation/Peaceful%20Music%20for%20Meditation.mp3"
+                        logger.info("Using Archive.org meditation as fallback")
+                    
                     audio_path = await self.downloader.download_audio(fallback_url, mood, language)
                     if audio_path and os.path.exists(audio_path) and os.path.getsize(audio_path) > 10240:
                         if audio_path != output_path:
