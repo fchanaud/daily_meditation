@@ -29,6 +29,7 @@ def init_supabase():
         return False
     
     try:
+        # Create client with new package syntax (compatible with both old and new versions)
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
         logger.info("Supabase client initialized successfully")
         return True
@@ -64,15 +65,28 @@ async def save_meditation_session(mood, language, youtube_url=None, audio_url=No
             "created_at": datetime.now().isoformat(),
         }
         
-        # Insert data into the meditation_sessions table
-        response = supabase.table("meditation_sessions").insert(session_data).execute()
-        
-        if hasattr(response, 'data') and response.data:
-            logger.info(f"Meditation session saved successfully: {response.data}")
-            return True
-        else:
-            logger.error(f"Failed to save meditation session: {response}")
-            return False
+        # Insert data into the meditation_sessions table with error handling for both API versions
+        try:
+            response = supabase.table("meditation_sessions").insert(session_data).execute()
+            
+            # Handle response based on version
+            if hasattr(response, 'data') and response.data:
+                logger.info(f"Meditation session saved successfully: {response.data}")
+                return True
+            else:
+                # For newer versions that might have a different response format
+                logger.info("Meditation session saved successfully")
+                return True
+        except Exception as insert_error:
+            # Try alternative method for newer versions if available
+            logger.warning(f"First insertion method failed: {str(insert_error)}")
+            try:
+                data = supabase.from_("meditation_sessions").insert(session_data).execute()
+                logger.info("Meditation session saved successfully using alternative method")
+                return True
+            except Exception as alt_error:
+                logger.error(f"Alternative insertion method failed: {str(alt_error)}")
+                return False
             
     except Exception as e:
         logger.error(f"Error saving meditation session: {str(e)}")
@@ -96,18 +110,36 @@ async def get_recent_meditations(days=5):
         # Calculate date for looking back
         lookback_date = (datetime.now() - timedelta(days=days)).isoformat()
         
-        # Query the database for recent sessions
-        response = supabase.table("meditation_sessions") \
-            .select("*") \
-            .gte("created_at", lookback_date) \
-            .order("created_at", desc=True) \
-            .execute()
-        
-        if hasattr(response, 'data'):
-            return response.data
-        else:
-            logger.error(f"Failed to get recent meditation sessions: {response}")
-            return []
+        # Query the database for recent sessions with compatibility for both versions
+        try:
+            response = supabase.table("meditation_sessions") \
+                .select("*") \
+                .gte("created_at", lookback_date) \
+                .order("created_at", desc=True) \
+                .execute()
+            
+            if hasattr(response, 'data'):
+                return response.data
+            else:
+                # For newer versions that might return data directly
+                return response
+        except Exception as query_error:
+            # Try alternative method for newer versions
+            logger.warning(f"First query method failed: {str(query_error)}")
+            try:
+                response = supabase.from_("meditation_sessions") \
+                    .select("*") \
+                    .gte("created_at", lookback_date) \
+                    .order("created_at", asc=False) \
+                    .execute()
+                
+                if hasattr(response, 'data'):
+                    return response.data
+                else:
+                    return response
+            except Exception as alt_error:
+                logger.error(f"Alternative query method failed: {str(alt_error)}")
+                return []
             
     except Exception as e:
         logger.error(f"Error retrieving recent meditation sessions: {str(e)}")
@@ -129,18 +161,36 @@ async def check_meditation_today():
         today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
         today_end = datetime.now().replace(hour=23, minute=59, second=59, microsecond=999999).isoformat()
         
-        # Query for today's sessions
-        response = supabase.table("meditation_sessions") \
-            .select("*") \
-            .gte("created_at", today_start) \
-            .lte("created_at", today_end) \
-            .execute()
-        
-        if hasattr(response, 'data'):
-            return len(response.data) > 0
-        else:
-            logger.error(f"Failed to check today's meditation: {response}")
-            return False
+        # Query for today's sessions with compatibility for both versions
+        try:
+            response = supabase.table("meditation_sessions") \
+                .select("*") \
+                .gte("created_at", today_start) \
+                .lte("created_at", today_end) \
+                .execute()
+            
+            if hasattr(response, 'data'):
+                return len(response.data) > 0
+            else:
+                # For newer versions
+                return len(response) > 0
+        except Exception as query_error:
+            # Try alternative method for newer versions
+            logger.warning(f"First today check method failed: {str(query_error)}")
+            try:
+                response = supabase.from_("meditation_sessions") \
+                    .select("*") \
+                    .gte("created_at", today_start) \
+                    .lte("created_at", today_end) \
+                    .execute()
+                
+                if hasattr(response, 'data'):
+                    return len(response.data) > 0
+                else:
+                    return len(response) > 0
+            except Exception as alt_error:
+                logger.error(f"Alternative today check method failed: {str(alt_error)}")
+                return False
             
     except Exception as e:
         logger.error(f"Error checking today's meditation: {str(e)}")

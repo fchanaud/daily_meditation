@@ -21,57 +21,16 @@ class OpenAIMeditationAgent:
     Uses OpenAI to get YouTube URLs for meditation videos matching a specific mood.
     """
     
-    def __init__(self, cache_dir=None):
+    def __init__(self):
         """
         Initialize the OpenAI meditation agent.
-        
-        Args:
-            cache_dir: Directory to cache responses
         """
         # Store OpenAI API key
         self.api_key = OPENAI_API_KEY
         self.api_url = "https://api.openai.com/v1/chat/completions"
         
-        # Set up cache directory
-        if cache_dir is None:
-            self.cache_dir = Path(__file__).parent.parent / "assets" / "cached_responses"
-        else:
-            self.cache_dir = Path(cache_dir)
-        
-        # Create cache directory if it doesn't exist
-        os.makedirs(self.cache_dir, exist_ok=True)
-        
-        # Cache file for OpenAI responses
-        self.cache_file = self.cache_dir / "openai_meditation_cache.json"
-        self.response_cache = self._load_cache()
-        
         # Optimize language templates for token efficiency
-        self.prompt_template = "Find YouTube meditation video: {duration} minutes, {mood} mood, {language} language. URL only."
-    
-    def _load_cache(self) -> Dict:
-        """
-        Load cached responses from file.
-        
-        Returns:
-            Dictionary containing cached responses
-        """
-        if os.path.exists(self.cache_file):
-            try:
-                with open(self.cache_file, 'r') as f:
-                    return json.load(f)
-            except Exception as e:
-                logger.error(f"Error loading cache: {str(e)}")
-        return {}
-    
-    def _save_cache(self) -> None:
-        """
-        Save cached responses to file.
-        """
-        try:
-            with open(self.cache_file, 'w') as f:
-                json.dump(self.response_cache, f, indent=2)
-        except Exception as e:
-            logger.error(f"Error saving cache: {str(e)}")
+        self.prompt_template = "Find YouTube meditation video: {duration} minutes, {mood} mood, {language} language. Return JSON with format: {{url: 'youtube_url_here'}}"
     
     async def find_meditation(self, mood: str, language: str = "english") -> Tuple[str, Dict]:
         """
@@ -87,18 +46,6 @@ class OpenAIMeditationAgent:
         # Normalize inputs
         mood = mood.lower().strip()
         language = language.lower().strip()
-        
-        # Create cache key
-        cache_key = f"{mood}_{language}"
-        
-        # Check if we have a cached response
-        if cache_key in self.response_cache:
-            logger.info(f"Using cached response for mood: {mood}, language: {language}")
-            cached_data = self.response_cache[cache_key]
-            return cached_data["youtube_url"], {
-                "youtube_url": cached_data["youtube_url"],
-                "title": cached_data.get("title", "Meditation Video")
-            }
         
         # Create minimal prompt based on mood and language
         prompt = self.prompt_template.format(
@@ -117,14 +64,6 @@ class OpenAIMeditationAgent:
             youtube_url = self._extract_youtube_url(response)
             
             if youtube_url:
-                # Cache the response with minimal data
-                cache_data = {
-                    "youtube_url": youtube_url,
-                    "title": f"{mood.capitalize()} Meditation"
-                }
-                self.response_cache[cache_key] = cache_data
-                self._save_cache()
-                
                 logger.info(f"Found YouTube meditation: {youtube_url}")
                 
                 # Return URL and minimal source info
@@ -135,16 +74,16 @@ class OpenAIMeditationAgent:
             else:
                 logger.warning(f"OpenAI response did not contain a valid YouTube URL")
                 # Return fallback URL
-                return "https://www.youtube.com/watch?v=O-6f5wQXSu8", {
-                    "youtube_url": "https://www.youtube.com/watch?v=O-6f5wQXSu8",
+                return "https://www.youtube.com/watch?v=ZToicYcHIOU", {
+                    "youtube_url": "https://www.youtube.com/watch?v=ZToicYcHIOU",
                     "title": "Fallback Meditation Video"
                 }
                 
         except Exception as e:
             logger.error(f"Error generating meditation URL with OpenAI: {str(e)}")
             # Return fallback URL
-            return "https://www.youtube.com/watch?v=O-6f5wQXSu8", {
-                "youtube_url": "https://www.youtube.com/watch?v=O-6f5wQXSu8",
+            return "https://www.youtube.com/watch?v=ZToicYcHIOU", {
+                "youtube_url": "https://www.youtube.com/watch?v=ZToicYcHIOU",
                 "title": "Fallback Meditation Video"
             }
     
@@ -164,13 +103,13 @@ class OpenAIMeditationAgent:
             # Check if API key is available
             if not self.api_key:
                 logger.warning("No OpenAI API key found. Returning fake response.")
-                return "https://www.youtube.com/watch?v=O-6f5wQXSu8"
+                return '{"url": "https://www.youtube.com/watch?v=ZToicYcHIOU"}'
             
             # Create minimal request payload
             payload = {
                 "model": "gpt-3.5-turbo",
                 "messages": [
-                    {"role": "system", "content": "Return only a YouTube URL for meditation videos (8-15 min). No other text."},
+                    {"role": "system", "content": "Return only a JSON object with a YouTube URL for meditation videos (8-15 min) in the format: {url: 'youtube_url_here'}. No other text."},
                     {"role": "user", "content": prompt}
                 ],
                 "max_tokens": 60,
@@ -202,8 +141,8 @@ class OpenAIMeditationAgent:
             
         except Exception as e:
             logger.error(f"Error calling OpenAI API: {str(e)}")
-            # Return a fallback URL directly
-            return "https://www.youtube.com/watch?v=O-6f5wQXSu8"
+            # Return a fallback URL directly as JSON
+            return '{"url": "https://www.youtube.com/watch?v=ZToicYcHIOU"}'
     
     def _extract_youtube_url(self, response_text: str) -> str:
         """
@@ -215,50 +154,22 @@ class OpenAIMeditationAgent:
         Returns:
             The YouTube URL or empty string if not found
         """
-        # Try to directly use the response if it looks like a URL
-        if response_text.startswith("http") and ("youtube.com" in response_text or "youtu.be" in response_text):
-            return response_text.strip()
-        
-        # Try to extract with regex
+        # Try to parse JSON response
+        try:
+            data = json.loads(response_text)
+            if "url" in data and ("youtube.com" in data["url"] or "youtu.be" in data["url"]):
+                return data["url"]
+        except json.JSONDecodeError:
+            logger.warning(f"Failed to parse JSON from response: {response_text}")
+            
+        # Try to extract with regex if JSON parsing failed
         import re
         url_match = re.search(r'(https?://(?:www\.)?(?:youtube\.com/watch\?v=|youtu\.be/)[a-zA-Z0-9_-]+)', response_text)
         
         if url_match:
             return url_match.group(1)
         
-        # If JSON was returned, try to parse it
-        try:
-            # Check if the text might be JSON
-            if '{' in response_text and '}' in response_text:
-                data = json.loads(response_text)
-                if "youtube_url" in data and ("youtube.com" in data["youtube_url"] or "youtu.be" in data["youtube_url"]):
-                    return data["youtube_url"]
-                elif "url" in data and ("youtube.com" in data["url"] or "youtu.be" in data["url"]):
-                    return data["url"]
-        except:
-            pass
-        
         return ""
-
-    def _parse_openai_response(self, response_text: str) -> Dict:
-        """
-        Parse the OpenAI response to extract the YouTube URL and title.
-        
-        Args:
-            response_text: The OpenAI response text
-            
-        Returns:
-            Dictionary containing the YouTube URL and title
-        """
-        url = self._extract_youtube_url(response_text)
-        
-        if url:
-            return {
-                "youtube_url": url,
-                "title": "Meditation Video"
-            }
-        
-        return {}
             
     async def process_feedback(self, feedback: Dict, video_data: Dict) -> None:
         """
@@ -270,5 +181,4 @@ class OpenAIMeditationAgent:
             video_data: Data about the video that was shown
         """
         # TODO: Implement feedback processing logic
-        # This method could store feedback and use it to guide future OpenAI prompts
         pass 
