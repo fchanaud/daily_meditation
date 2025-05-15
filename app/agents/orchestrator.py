@@ -84,19 +84,39 @@ class MeditationOrchestrator:
         temp_files = []
         final_audio_path = None
         
+        # Track previously failed URLs to avoid reusing them
+        failed_urls = set()
+        
         # Try multiple attempts to find a suitable meditation
         for attempt in range(1, self.max_attempts + 1):
             try:
                 logger.info(f"Attempt {attempt}/{self.max_attempts} to find a suitable meditation")
                 
-                # Step 1: Find a meditation audio URL
-                meditation_url = await self.retriever.find_meditation(mood, language)
-                logger.info(f"Found meditation URL: {meditation_url}")
+                # Step 1: Find a meditation audio URL (that hasn't failed before)
+                meditation_url = None
+                max_url_attempts = 3  # Maximum number of attempts to find a new URL
+                for url_attempt in range(1, max_url_attempts + 1):
+                    meditation_url = await self.retriever.find_meditation(mood, language)
+                    if meditation_url not in failed_urls:
+                        logger.info(f"Found new meditation URL: {meditation_url}")
+                        break
+                    logger.warning(f"URL has failed before, trying another one (attempt {url_attempt}/{max_url_attempts})")
+                
+                if meditation_url in failed_urls:
+                    logger.warning("Couldn't find a new URL after multiple attempts, using the last one anyway")
+                
+                logger.info(f"Using meditation URL: {meditation_url}")
                 
                 # Step 2: Download the meditation audio
                 audio_path = await self.downloader.download_audio(meditation_url, mood, language)
                 logger.info(f"Downloaded meditation audio to: {audio_path}")
                 temp_files.append(audio_path)
+                
+                # Check if this is a fallback audio file (which indicates download failed)
+                if "fallback" in audio_path or os.path.getsize(audio_path) < 1024:
+                    failed_urls.add(meditation_url)
+                    logger.warning(f"Download failed for URL: {meditation_url}, added to failed URLs")
+                    continue  # Skip quality check and try another URL
                 
                 # Step 3: Check audio quality
                 is_acceptable, quality_details = await self.quality_checker.check_quality(audio_path)
@@ -127,6 +147,8 @@ class MeditationOrchestrator:
                         logger.warning("Using last attempt meditation despite quality issues")
                 else:
                     logger.warning(f"Rejected audio due to quality issues: {quality_details.get('issues', [])}")
+                    # Add URL to failed list to avoid reusing it
+                    failed_urls.add(meditation_url)
                     # Continue to next attempt
             
             except Exception as e:

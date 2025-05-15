@@ -65,7 +65,10 @@ class AudioRetrieverAgent:
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
             'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15',
             'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:90.0) Gecko/20100101 Firefox/90.0',
-            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36'
+            'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36',
+            'Mozilla/5.0 (iPhone; CPU iPhone OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1',
+            'Mozilla/5.0 (iPad; CPU OS 14_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1',
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36 Edg/91.0.864.59'
         ]
         
         # Direct URLs to known audio collections on Archive.org
@@ -73,32 +76,82 @@ class AudioRetrieverAgent:
             "https://archive.org/details/meditation-music",
             "https://archive.org/details/relaxation-music",
             "https://archive.org/details/ambient-sleep-music-for-deep-sleep",
-            "https://archive.org/details/MeditationMusic_20162107"
+            "https://archive.org/details/MeditationMusic_20162107",
+            "https://archive.org/details/meditation_audio",
+            "https://archive.org/details/meditation_guides",
+            "https://archive.org/details/mindfulness-meditation"
         ]
         
-        # Pre-vetted Pixabay MP3 URLs that work and are of appropriate length
+        # Pre-vetted MP3 URLs that work and are of appropriate length
+        # Added more reliable direct URLs from different sources
         self.pixabay_prevetted = {
             "calm": [
-                "https://cdn.pixabay.com/download/audio/2021/11/25/audio_0a1dcd2f51.mp3?filename=peaceful-meditation-143862.mp3",
-                "https://cdn.pixabay.com/download/audio/2022/05/16/audio_98461371a9.mp3?filename=namaste-meditation-music-119593.mp3"
+                "https://cdn.pixabay.com/download/audio/2022/05/27/audio_1b8bebec68.mp3?filename=calm-meditation-126837.mp3",
+                "https://cdn.pixabay.com/download/audio/2021/04/07/audio_c8c4e9d068.mp3?filename=peaceful-garden-healing-light-piano-for-meditation-06-17606.mp3",
+                "https://cdn.pixabay.com/download/audio/2022/01/18/audio_f1e6e9b793.mp3?filename=relaxing-music-vol1-124477.mp3"
             ],
             "focused": [
                 "https://cdn.pixabay.com/download/audio/2022/03/10/audio_c9d339a9c4.mp3?filename=ambient-piano-amp-strings-10711.mp3",
-                "https://cdn.pixabay.com/download/audio/2022/01/20/audio_333dfcfcb1.mp3?filename=mind-body-experience-144047.mp3"
+                "https://cdn.pixabay.com/download/audio/2022/01/20/audio_333dfcfcb1.mp3?filename=mind-body-experience-144047.mp3",
+                "https://cdn.pixabay.com/download/audio/2021/09/06/audio_72291347f9.mp3?filename=focus-91459.mp3"
             ],
             "relaxed": [
                 "https://cdn.pixabay.com/download/audio/2022/05/26/audio_c835e4903f.mp3?filename=dreamy-imagination-14144.mp3",
-                "https://cdn.pixabay.com/download/audio/2021/11/01/audio_00fa5593e3.mp3?filename=nebula-144946.mp3"
+                "https://cdn.pixabay.com/download/audio/2021/11/01/audio_00fa5593e3.mp3?filename=nebula-144946.mp3",
+                "https://cdn.pixabay.com/download/audio/2021/03/29/audio_5d05bae3df.mp3?filename=deep-meditation-118978.mp3"
             ],
             "energized": [
                 "https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0c6c29ab2.mp3?filename=morning-garden-acoustic-chill-7111.mp3",
-                "https://cdn.pixabay.com/download/audio/2022/04/27/audio_db6de5f007.mp3?filename=relaxing-mountains-rivers-running-water-118762.mp3"
+                "https://cdn.pixabay.com/download/audio/2022/04/27/audio_db6de5f007.mp3?filename=relaxing-mountains-rivers-running-water-118762.mp3",
+                "https://cdn.pixabay.com/download/audio/2020/11/10/audio_38b45228a4.mp3?filename=morning-light-10279.mp3"
+            ],
+            "grateful": [
+                "https://cdn.pixabay.com/download/audio/2021/04/02/audio_20f547a915.mp3?filename=nature-soundtrack-10276.mp3",
+                "https://cdn.pixabay.com/download/audio/2021/09/09/audio_8cb658d098.mp3?filename=new-beginning-122115.mp3",
+                "https://cdn.pixabay.com/download/audio/2022/01/17/audio_ad49092553.mp3?filename=let-it-go-12279.mp3"
+            ],
+            "happy": [
+                "https://cdn.pixabay.com/download/audio/2021/04/07/audio_1650e79ce1.mp3?filename=lofi-study-112191.mp3",
+                "https://cdn.pixabay.com/download/audio/2022/06/10/audio_13b479fbce.mp3?filename=positive-mindfulness-137051.mp3",
+                "https://cdn.pixabay.com/download/audio/2022/01/14/audio_ea67cd20c6.mp3?filename=sunset-vibes-lo-fi-8912.mp3"
+            ],
+            "peaceful": [
+                "https://cdn.pixabay.com/download/audio/2021/03/08/audio_d8eb8cdefd.mp3?filename=beautiful-light-piano-for-media-9883.mp3",
+                "https://cdn.pixabay.com/download/audio/2021/03/08/audio_83607df9e7.mp3?filename=dream-meditation-125764.mp3",
+                "https://cdn.pixabay.com/download/audio/2022/04/08/audio_34accdeecf.mp3?filename=the-cradle-of-your-soul-20931.mp3"
+            ],
+            "confident": [
+                "https://cdn.pixabay.com/download/audio/2022/03/17/audio_5e6ae3f010.mp3?filename=cinematic-inspirational-piano-143281.mp3",
+                "https://cdn.pixabay.com/download/audio/2022/01/18/audio_c54a9d9988.mp3?filename=driving-motivation-143945.mp3",
+                "https://cdn.pixabay.com/download/audio/2022/02/07/audio_fb3da29ade.mp3?filename=be-motivated-7091.mp3"
+            ],
+            "creative": [
+                "https://cdn.pixabay.com/download/audio/2021/11/25/audio_68669c6839.mp3?filename=lofi-chill-14093.mp3",
+                "https://cdn.pixabay.com/download/audio/2022/05/17/audio_4f55b11471.mp3?filename=floating-meditation-ambient-7683.mp3",
+                "https://cdn.pixabay.com/download/audio/2021/04/08/audio_ede0241c6f.mp3?filename=dreaming-of-nature-114481.mp3"
+            ],
+            "compassionate": [
+                "https://cdn.pixabay.com/download/audio/2021/03/08/audio_d6aa03cdb0.mp3?filename=healing-meditation-10-min-112224.mp3",
+                "https://cdn.pixabay.com/download/audio/2021/04/28/audio_90fb5a3eb7.mp3?filename=dream-your-dreams-6677.mp3",
+                "https://cdn.pixabay.com/download/audio/2022/01/13/audio_a6ab69e8d6.mp3?filename=a-small-miracle-132128.mp3"
             ],
             "default": [
                 "https://cdn.pixabay.com/download/audio/2022/05/27/audio_1b8bebec68.mp3?filename=calm-meditation-126837.mp3",
-                "https://cdn.pixabay.com/download/audio/2021/11/01/audio_3702db7734.mp3?filename=time-pass-143246.mp3"
+                "https://cdn.pixabay.com/download/audio/2021/11/01/audio_3702db7734.mp3?filename=time-pass-143246.mp3",
+                "https://cdn.pixabay.com/download/audio/2021/04/07/audio_c8c4e9d068.mp3?filename=peaceful-garden-healing-light-piano-for-meditation-06-17606.mp3",
+                "https://cdn.pixabay.com/download/audio/2022/01/14/audio_ea67cd20c6.mp3?filename=sunset-vibes-lo-fi-8912.mp3"
             ]
         }
+        
+        # Free meditation MP3s from other reliable sources
+        self.additional_sources = [
+            "https://www.freemindfulness.org/download/Breath%20meditation.mp3",
+            "https://www.freemindfulness.org/download/3-Minute%20Breathing%20Space%20meditation.mp3",
+            "https://www.freemindfulness.org/download/Body%20Scan%20for%20Younger%20Children.mp3",
+            "https://www.freemindfulness.org/download/Body%20Scan.mp3",
+            "https://www.freemindfulness.org/download/Mindful%20Movement.mp3",
+            "https://www.freemindfulness.org/download/Mountain%20Meditation.mp3"
+        ]
     
     async def find_meditation(self, mood, language="english"):
         """
@@ -125,45 +178,60 @@ class AudioRetrieverAgent:
         if language.lower() != "english":
             queries = [f"{q} {language}" for q in queries]
         
-        # Try pre-vetted Pixabay URLs first (these are known to work)
-        logger.info(f"Trying pre-vetted Pixabay URLs for mood: {mood}")
-        mood_urls = self.pixabay_prevetted.get(mood, self.pixabay_prevetted["default"])
-        if mood_urls:
-            # Return a random pre-vetted URL
-            return random.choice(mood_urls)
+        # Choose source with weighted probability:
+        # - 70% chance to use pre-vetted URLs (highest success rate)
+        # - 15% chance to try Archive.org
+        # - 10% chance to use additional sources
+        # - 5% chance to try Pixabay scraping
+        source_choice = random.choices(
+            ["prevetted", "archive", "additional", "pixabay"],
+            weights=[70, 15, 10, 5],
+            k=1
+        )[0]
         
-        # Randomly decide which source to try first
-        sources = ["pixabay", "archive"]
-        random.shuffle(sources)
+        if source_choice == "prevetted":
+            # Try pre-vetted URLs first (these are known to work)
+            logger.info(f"Trying pre-vetted URLs for mood: {mood}")
+            mood_urls = self.pixabay_prevetted.get(mood, self.pixabay_prevetted["default"])
+            if mood_urls:
+                return random.choice(mood_urls)
         
-        # Try each source with different queries
-        for source in sources:
-            for query in queries:
-                logger.info(f"Searching for meditation on {source} with query: {query}")
-                
-                if source == "pixabay":
-                    audio_url = await self._scrape_pixabay(query)
-                else:  # archive.org
-                    audio_url = await self._scrape_archive_org(query)
-                
+        elif source_choice == "additional":
+            # Try additional source URLs
+            logger.info("Trying additional meditation sources")
+            return random.choice(self.additional_sources)
+        
+        elif source_choice == "archive":
+            # Try Archive.org collections directly
+            logger.info("Trying Archive.org collections")
+            for collection_url in random.sample(self.archive_collections, min(3, len(self.archive_collections))):
+                audio_url = await self._scrape_archive_collection(collection_url)
                 if audio_url:
-                    logger.info(f"Found meditation audio URL on {source}: {audio_url}")
+                    logger.info(f"Found meditation audio URL from Archive.org collection: {audio_url}")
                     return audio_url
+                await asyncio.sleep(0.5)
                 
-                # Respect rate limits
-                await asyncio.sleep(1)
-        
-        # If we still haven't found anything, check Archive.org collections directly
-        logger.info("Trying direct Archive.org collections")
-        for collection_url in self.archive_collections:
-            audio_url = await self._scrape_archive_collection(collection_url)
-            if audio_url:
-                logger.info(f"Found meditation audio URL from Archive.org collection: {audio_url}")
-                return audio_url
-            await asyncio.sleep(1)
+            # If no Archive.org audio found, try searching
+            for query in queries:
+                logger.info(f"Searching Archive.org with query: {query}")
+                audio_url = await self._scrape_archive_org(query)
+                if audio_url:
+                    logger.info(f"Found meditation audio URL on Archive.org: {audio_url}")
+                    return audio_url
+                await asyncio.sleep(0.5)
+                
+        elif source_choice == "pixabay":
+            # Try Pixabay scraping
+            for query in queries:
+                logger.info(f"Searching Pixabay with query: {query}")
+                audio_url = await self._scrape_pixabay(query)
+                if audio_url:
+                    logger.info(f"Found meditation audio URL on Pixabay: {audio_url}")
+                    return audio_url
+                await asyncio.sleep(0.5)
         
         # If we still haven't found anything, use a fallback URL
-        logger.warning("Couldn't find meditation audio, using fallback URL")
+        logger.warning("Couldn't find meditation audio with selected method, using fallback URL")
         return self._get_fallback_url(mood)
     
     async def _scrape_pixabay(self, query):
