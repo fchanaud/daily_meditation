@@ -1,15 +1,31 @@
-from fastapi import FastAPI, HTTPException, Response
+from fastapi import FastAPI, HTTPException, Response, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 import os
 import tempfile
-from app.agents.orchestrator import MeditationOrchestrator
+from pathlib import Path
+# Temporarily comment out the problematic import
+# from app.agents.orchestrator import MeditationOrchestrator
+
+# Setup templates
+templates_dir = Path(__file__).parent.parent / "templates"
+templates = Jinja2Templates(directory=str(templates_dir))
+
+# Create static directory if it doesn't exist
+static_dir = Path(__file__).parent.parent / "static"
+static_dir.mkdir(exist_ok=True)
 
 app = FastAPI(
     title="Daily Meditation API",
     description="Generate personalized meditations based on your mood",
     version="1.0.0",
 )
+
+# Mount static files
+app.mount("/static", StaticFiles(directory=str(static_dir)), name="static")
 
 # Add CORS middleware
 app.add_middleware(
@@ -24,24 +40,38 @@ class MeditationRequest(BaseModel):
     mood: str
     language: str = "english"  # Default to English if not specified
     
-@app.get("/")
-async def root():
-    return {"message": "Welcome to the Daily Meditation API"}
+@app.get("/", response_class=HTMLResponse)
+async def root(request: Request):
+    """
+    Render the homepage with the mood selection interface.
+    """
+    moods = [
+        "calm", "focused", "relaxed", "energized", "grateful", 
+        "happy", "peaceful", "confident", "creative", "compassionate"
+    ]
+    return templates.TemplateResponse(
+        "index.html", 
+        {"request": request, "moods": moods}
+    )
 
 @app.post("/generate-meditation")
 async def generate_meditation(request: MeditationRequest):
     """
     Generate a personalized meditation based on the provided mood and language preference.
     
-    The API will:
-    1. Scrape the web for a meditation audio file matching the mood
-    2. Download the audio file
-    3. Check the audio quality to ensure it meets standards
-    4. Return the best matching meditation
-    
-    Returns an MP3 audio file of the meditation.
+    This is currently a placeholder implementation that returns a JSON response.
+    The actual audio retrieval functionality is disabled due to missing dependencies.
     """
     try:
+        # For now, return a placeholder response instead of generating audio
+        return JSONResponse({
+            "status": "success",
+            "message": f"Mock meditation for mood: {request.mood} in {request.language}",
+            "note": "This is a placeholder. The audio generation functionality is temporarily disabled."
+        })
+        
+        # Commented out original implementation
+        """
         orchestrator = MeditationOrchestrator(language=request.language)
         
         # Create a temporary file to store the meditation
@@ -70,6 +100,7 @@ async def generate_meditation(request: MeditationRequest):
                 "Content-Disposition": f'attachment; filename="meditation_{request.mood}_{request.language}.mp3"'
             }
         )
+        """
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate meditation: {str(e)}")
 
