@@ -13,6 +13,7 @@ from pathlib import Path
 from urllib.parse import urlparse, unquote
 import requests
 import random
+from pytube import YouTube
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -69,6 +70,11 @@ class AudioDownloaderAgent:
         if file_path.exists():
             logger.info(f"File already exists in cache: {file_path}")
             return str(file_path)
+        
+        # Check if this is a YouTube URL
+        if 'youtube.com' in url or 'youtu.be' in url:
+            logger.info("Detected YouTube URL, using pytube for download")
+            return await self._download_from_youtube(url, file_path, mood, language)
         
         # Create a session if we don't have one
         if self.session is None:
@@ -141,6 +147,94 @@ class AudioDownloaderAgent:
             logger.error(f"Error downloading audio with aiohttp: {str(e)}")
             # Try with requests as fallback
             return await self._download_with_requests(url, file_path, mood, language)
+    
+    async def _download_from_youtube(self, url, file_path, mood, language):
+        """
+        Download audio from a YouTube video URL using pytube.
+        
+        Args:
+            url: YouTube URL
+            file_path: Path to save the file
+            mood: Mood of the meditation
+            language: Language of the meditation
+            
+        Returns:
+            Path to the downloaded file or error file
+        """
+        logger.info(f"Downloading audio from YouTube: {url}")
+        
+        # Run the YouTube download in a thread pool to avoid blocking the event loop
+        try:
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(None, self._download_youtube_sync, url, file_path)
+            
+            if result is True:
+                logger.info(f"Successfully downloaded YouTube audio to {file_path}")
+                return str(file_path)
+            else:
+                logger.error("Failed to download YouTube audio")
+                return await self._create_error_file(mood, language, "YouTube download failed")
+                
+        except Exception as e:
+            logger.error(f"Error downloading from YouTube: {str(e)}")
+            return await self._create_error_file(mood, language, f"YouTube download error: {str(e)}")
+    
+    def _download_youtube_sync(self, url, file_path):
+        """
+        Synchronous function to download YouTube audio using pytube.
+        This function will be run in a thread pool.
+        
+        Args:
+            url: YouTube URL
+            file_path: Path to save the file
+            
+        Returns:
+            True if download succeeded, False otherwise
+        """
+        try:
+            # Create a YouTube object
+            yt = YouTube(url)
+            
+            # Get the audio stream with highest quality
+            audio_stream = yt.streams.filter(only_audio=True).order_by('abr').desc().first()
+            
+            if not audio_stream:
+                # If no audio-only stream, get the stream with lowest resolution
+                # to minimize download size while still getting the audio
+                audio_stream = yt.streams.filter(progressive=True).order_by('resolution').first()
+            
+            if not audio_stream:
+                logger.error("No suitable stream found for YouTube video")
+                return False
+            
+            # Download to a temporary file
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp4") as temp_file:
+                temp_path = temp_file.name
+            
+            # Download the file
+            audio_stream.download(output_path=os.path.dirname(temp_path), filename=os.path.basename(temp_path))
+            
+            # Convert to MP3 if needed using pydub
+            if not temp_path.endswith('.mp3'):
+                from pydub import AudioSegment
+                
+                # Load the audio file (mp4, webm, etc.)
+                audio = AudioSegment.from_file(temp_path)
+                
+                # Export as MP3
+                audio.export(file_path, format="mp3")
+                
+                # Remove the temporary file
+                os.unlink(temp_path)
+            else:
+                # If already MP3, just rename/move
+                os.rename(temp_path, file_path)
+            
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error in YouTube download: {str(e)}")
+            return False
     
     async def _download_with_requests(self, url, file_path, mood, language):
         """

@@ -68,7 +68,7 @@ class MeditationOrchestrator:
             output_path: Optional path to save the meditation
             
         Returns:
-            Path to the final meditation audio file
+            Tuple containing (path to the final meditation audio file, source information)
         """
         # Use instance language if none provided
         language = language or self.language
@@ -83,6 +83,7 @@ class MeditationOrchestrator:
         # Store temporary files to clean up later
         temp_files = []
         final_audio_path = None
+        source_info = None
         
         # Track previously failed URLs to avoid reusing them
         failed_urls = set()
@@ -96,7 +97,16 @@ class MeditationOrchestrator:
                 meditation_url = None
                 max_url_attempts = 3  # Maximum number of attempts to find a new URL
                 for url_attempt in range(1, max_url_attempts + 1):
-                    meditation_url = await self.retriever.find_meditation(mood, language)
+                    # The retrieval might now return a tuple (url, info)
+                    retrieval_result = await self.retriever.find_meditation(mood, language)
+                    
+                    if isinstance(retrieval_result, tuple):
+                        meditation_url = retrieval_result[0]
+                        source_info = retrieval_result[1]
+                    else:
+                        meditation_url = retrieval_result
+                        source_info = None
+                    
                     if meditation_url not in failed_urls:
                         logger.info(f"Found new meditation URL: {meditation_url}")
                         break
@@ -184,13 +194,19 @@ class MeditationOrchestrator:
             if final_audio_path is None or os.path.getsize(final_audio_path) < 10240:
                 logger.warning("Attempting one last guaranteed fallback URL")
                 try:
-                    # Use a guaranteed working meditation URL from Archive.org or UCLA (for French)
+                    # Use a guaranteed working meditation URL from UCLA (for French)
                     if language and language.lower() == "french":
                         fallback_url = "https://d1cy5zxxhbcbkk.cloudfront.net/guided-meditations/French-breathing.mp3"
                         logger.info("Using UCLA French meditation as fallback")
                     else:
-                        fallback_url = "https://archive.org/download/peaceful-music-for-meditation/Peaceful%20Music%20for%20Meditation.mp3"
-                        logger.info("Using Archive.org meditation as fallback")
+                        # Try a general YouTube meditation
+                        fallback_result = await self.retriever._search_youtube("meditation music")
+                        if fallback_result and len(fallback_result) > 0:
+                            fallback_url = fallback_result[0]
+                            logger.info(f"Using YouTube meditation as fallback: {fallback_url}")
+                        else:
+                            fallback_url = "https://d1cy5zxxhbcbkk.cloudfront.net/guided-meditations/French-breathing.mp3"
+                            logger.info("Using UCLA meditation as backup fallback")
                     
                     audio_path = await self.downloader.download_audio(fallback_url, mood, language)
                     if audio_path and os.path.exists(audio_path) and os.path.getsize(audio_path) > 10240:
@@ -198,25 +214,36 @@ class MeditationOrchestrator:
                             shutil.copy2(audio_path, output_path)
                         final_audio_path = output_path
                         temp_files.append(audio_path)
+                        
+                        # Update source_info for the fallback
+                        if 'youtube.com' in fallback_url or 'youtu.be' in fallback_url:
+                            source_info = {
+                                'youtube_url': fallback_url,
+                                'title': 'Fallback Meditation Audio'
+                            }
                 except Exception as e:
-                    logger.error(f"Error with final fallback: {str(e)}")
-            
-            # If all else fails, create a placeholder file
-            if final_audio_path is None or os.path.getsize(final_audio_path) < 1024:
-                logger.warning("Creating empty placeholder file")
-                Path(output_path).touch()
-                final_audio_path = output_path
+                    logger.error(f"Error using fallback URL: {str(e)}")
         
-        # Clean up temporary files
+        # Clean up temporary files except the final one
         for temp_file in temp_files:
-            if os.path.exists(temp_file) and temp_file != output_path:
-                try:
+            try:
+                if temp_file != final_audio_path and os.path.exists(temp_file):
                     os.unlink(temp_file)
-                except Exception as e:
-                    logger.error(f"Error cleaning up temporary file {temp_file}: {str(e)}")
+            except Exception as e:
+                logger.error(f"Error cleaning up temporary file {temp_file}: {str(e)}")
         
-        logger.info(f"Meditation generation complete: {final_audio_path}")
-        return final_audio_path
+        # If we have a final audio file, return it along with source info
+        if final_audio_path and os.path.exists(final_audio_path):
+            logger.info(f"Meditation generation complete: {final_audio_path}")
+            return (final_audio_path, source_info) if source_info else final_audio_path
+            
+        # If all else fails, return a guaranteed system fallback
+        fallback_file = self._get_or_create_fallback(mood, language)
+        logger.warning(f"Using system fallback file: {fallback_file}")
+        if fallback_file != output_path:
+            shutil.copy2(fallback_file, output_path)
+        
+        return output_path
     
     async def close(self):
         """

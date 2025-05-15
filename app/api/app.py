@@ -61,7 +61,7 @@ async def generate_meditation(request: MeditationRequest):
     Generate a personalized meditation based on the provided mood and language preference.
     
     The API will:
-    1. Search Pixabay and Archive.org for suitable meditation audio matching the mood
+    1. Search YouTube for suitable meditation audio matching the mood and duration
     2. Download the audio file (typically around 10 minutes in length)
     3. Check the audio quality to ensure it meets standards
     4. Return a URL to the best matching meditation
@@ -76,11 +76,15 @@ async def generate_meditation(request: MeditationRequest):
             temp_path = temp_file.name
         
         # Generate the meditation
-        meditation_path = await orchestrator.generate_meditation(
+        meditation_result = await orchestrator.generate_meditation(
             request.mood, 
             language=request.language,
             output_path=temp_path
         )
+        
+        # meditation_result is now a tuple (path, source_info)
+        meditation_path = meditation_result[0] if isinstance(meditation_result, tuple) else meditation_result
+        source_info = meditation_result[1] if isinstance(meditation_result, tuple) and len(meditation_result) > 1 else None
         
         # Clean up resources
         await orchestrator.close()
@@ -109,7 +113,8 @@ async def generate_meditation(request: MeditationRequest):
             "mood": request.mood,
             "language": request.language,
             "message": f"Your {request.mood} meditation is ready to play.",
-            "note": "Find a quiet place, sit comfortably, and breathe deeply as you listen."
+            "note": "Find a quiet place, sit comfortably, and breathe deeply as you listen.",
+            "source_info": source_info
         }
     except Exception as e:
         # For debugging purposes, log the error

@@ -80,11 +80,14 @@
         
         <!-- Audio player -->
         <div id="audio-player-container" class="mt-4" style="display: none;">
-            <audio id="meditation-audio" controls autoplay class="w-100">
+            <button id="force-play-button" class="btn btn-lg btn-primary mb-3 w-100">
+                <i class="fas fa-play"></i> Play Meditation
+            </button>
+            <audio id="meditation-audio" controls class="w-100">
                 <source id="meditation-source" src="" type="audio/mpeg">
+                <source id="meditation-source-mp4" src="" type="audio/mp4">
                 Your browser does not support the audio element.
             </audio>
-            <p class="text-muted mt-2">If audio doesn't play automatically, click the play button above.</p>
         </div>
     </div>
 </div>
@@ -205,10 +208,73 @@
                     responseNote.textContent = data.note;
                 }
                 
-                // Set up audio player with the meditation URL
+                // Check if we have YouTube info first
+                if (data.source_info && data.source_info.youtube_url) {
+                    // Redirect directly to YouTube
+                    console.log('Redirecting to YouTube:', data.source_info.youtube_url);
+                    window.location.href = data.source_info.youtube_url;
+                    return; // Stop execution here since we're redirecting
+                }
+                
+                // Set up audio player with the meditation URL only if we're not redirecting to YouTube
                 if (data.audio_url) {
-                    meditationSource.src = data.audio_url;
+                    // Clear any previous event listeners
+                    meditationAudio.oncanplay = null;
+                    meditationAudio.onerror = null;
+                    
+                    // Add audio event listeners
+                    meditationAudio.onerror = function(e) {
+                        console.error('Audio error:', e);
+                        alert('Error loading the meditation audio. Please try a different meditation.');
+                    };
+                    
+                    meditationAudio.oncanplay = function() {
+                        console.log('Audio is ready to play');
+                    };
+                    
+                    // Set the source and load the audio
+                    const absoluteAudioUrl = new URL(data.audio_url, window.location.origin).href;
+                    console.log('Setting absolute audio URLs:', absoluteAudioUrl);
+                    meditationSource.src = absoluteAudioUrl;
+                    document.getElementById('meditation-source-mp4').src = absoluteAudioUrl;
                     meditationAudio.load(); // Reload the audio element
+                    
+                    // Set up the play button - remove any existing listeners first
+                    const forcePlayButton = document.getElementById('force-play-button');
+                    
+                    // Remove any existing event listeners by cloning and replacing the button
+                    const newPlayButton = forcePlayButton.cloneNode(true);
+                    forcePlayButton.parentNode.replaceChild(newPlayButton, forcePlayButton);
+                    
+                    // Add the event listener to the new button
+                    newPlayButton.addEventListener('click', function() {
+                        // Visual feedback when clicked
+                        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+                        
+                        // Make sure the audio element has a valid source
+                        if (!meditationAudio.src || meditationAudio.src === window.location.href) {
+                            console.error('Audio source is not properly set');
+                            // Make sure we use an absolute URL with the current origin
+                            const absoluteUrl = new URL(data.audio_url, window.location.origin).href;
+                            meditationAudio.src = absoluteUrl;
+                            console.log('Setting absolute audio URL:', absoluteUrl);
+                            meditationAudio.load();
+                        }
+                        
+                        console.log('Attempting to play audio from:', meditationAudio.src);
+                        
+                        meditationAudio.play()
+                            .then(() => {
+                                // Reset button text once playing
+                                this.innerHTML = '<i class="fas fa-play"></i> Play Meditation';
+                            })
+                            .catch(e => {
+                                console.error('Play failed:', e);
+                                this.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Play Error';
+                                alert('Unable to play audio. Please check your browser settings or try again.');
+                            });
+                    });
+                    
                     audioPlayerContainer.style.display = 'block';
                 }
                 
