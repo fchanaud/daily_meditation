@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Response, Request
+from fastapi import FastAPI, HTTPException, Response, Request, Depends, Cookie
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
@@ -6,7 +6,9 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 import os
 import tempfile
+import uuid
 from pathlib import Path
+from typing import List, Dict, Optional, Any
 # Now we can use the real orchestrator
 from app.agents.orchestrator import MeditationOrchestrator
 import time
@@ -21,7 +23,7 @@ static_dir.mkdir(exist_ok=True)
 
 app = FastAPI(
     title="Daily Meditation API",
-    description="Generate personalized meditations based on your mood using audio from Pixabay and Archive.org",
+    description="Generate personalized meditation experiences based on your mood using OpenAI to find YouTube videos",
     version="1.0.0",
 )
 
@@ -37,9 +39,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Initialize the orchestrator - we'll reuse this instance
+meditation_orchestrator = MeditationOrchestrator()
+
 class MeditationRequest(BaseModel):
     mood: str
     language: str = "english"  # Default to English if not specified
+
+class FeedbackResponse(BaseModel):
+    rating: int
+    improved_mood: bool
+    want_similar: bool
+    improvement_suggestions: Optional[str] = None
+    enjoyed_artist: Optional[bool] = None
+    enjoyed_duration: Optional[bool] = None
     
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
@@ -55,72 +68,94 @@ async def root(request: Request):
         {"request": request, "moods": moods}
     )
 
+# Helper function to get or create a user ID from cookies
+async def get_user_id(user_id: Optional[str] = Cookie(None)):
+    if not user_id:
+        user_id = str(uuid.uuid4())
+    return user_id
+
 @app.post("/generate-meditation")
-async def generate_meditation(request: MeditationRequest):
+async def generate_meditation(request: MeditationRequest, user_id: str = Depends(get_user_id)):
     """
     Generate a personalized meditation based on the provided mood and language preference.
     
     The API will:
-    1. Search YouTube for suitable meditation audio matching the mood and duration
-    2. Download the audio file (typically around 10 minutes in length)
-    3. Check the audio quality to ensure it meets standards
-    4. Return a URL to the best matching meditation
+    1. Use OpenAI to find a suitable YouTube meditation video matching the mood (8-15 minutes long)
+    2. Return the YouTube URL directly for the frontend to handle
+    3. Store the URL in the database
     
-    Returns JSON with audio URL and metadata.
+    Returns JSON with YouTube URL and metadata.
     """
     try:
-        orchestrator = MeditationOrchestrator(language=request.language)
-        
-        # Create a temporary file to store the meditation
-        with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as temp_file:
-            temp_path = temp_file.name
-        
-        # Generate the meditation
-        meditation_result = await orchestrator.generate_meditation(
+        # Find a meditation using our orchestrator
+        youtube_url, source_info = await meditation_orchestrator.generate_meditation(
             request.mood, 
-            language=request.language,
-            output_path=temp_path
+            language=request.language
         )
         
-        # meditation_result is now a tuple (path, source_info)
-        meditation_path = meditation_result[0] if isinstance(meditation_result, tuple) else meditation_result
-        source_info = meditation_result[1] if isinstance(meditation_result, tuple) and len(meditation_result) > 1 else None
+        # Check if feedback should be collected
+        should_show_feedback = meditation_orchestrator.should_show_feedback_form(user_id)
         
-        # Clean up resources
-        await orchestrator.close()
-        
-        # Move the file to a static location for serving
-        static_dir = Path(__file__).parent.parent / "static" / "meditations"
-        static_dir.mkdir(exist_ok=True)
-        
-        # Create a unique filename based on mood, language and timestamp
-        timestamp = int(time.time())
-        filename = f"meditation_{request.mood}_{request.language}_{timestamp}.mp3"
-        static_path = static_dir / filename
-        
-        # Move the file
-        import shutil
-        shutil.copy(meditation_path, static_path)
-        
-        # Clean up the temporary file
-        os.unlink(meditation_path)
-        
-        # Return the audio URL and metadata
-        audio_url = f"/static/meditations/{filename}"
-        return {
+        # Create response content
+        response_content = {
             "status": "success",
-            "audio_url": audio_url,
             "mood": request.mood,
             "language": request.language,
             "message": f"Your {request.mood} meditation is ready to play.",
-            "note": "Find a quiet place, sit comfortably, and breathe deeply as you listen.",
-            "source_info": source_info
+            "note": "Find a quiet place, sit comfortably, and breathe deeply as you watch the video.",
+            "source_info": source_info,
+            "should_show_feedback": should_show_feedback,
+            "feedback_questions": meditation_orchestrator.get_feedback_questions() if should_show_feedback else [],
+            "youtube_url": youtube_url  # Direct URL to the video
         }
+        
+        response = JSONResponse(content=response_content)
+        
+        # Set user_id cookie if it doesn't exist
+        if not user_id:
+            response.set_cookie(key="user_id", value=user_id)
+            
+        return response
     except Exception as e:
         # For debugging purposes, log the error
         import logging
         logging.error(f"Error generating meditation: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to generate meditation: {str(e)}")
+
+@app.post("/submit-feedback")
+async def submit_feedback(feedback: FeedbackResponse, user_id: str = Depends(get_user_id)):
+    """
+    Submit feedback about a meditation session.
+    
+    Args:
+        feedback: The user's feedback responses
+        user_id: The user identifier
+        
+    Returns:
+        JSON response confirming the feedback was saved
+    """
+    try:
+        # Convert feedback model to dictionary
+        feedback_dict = feedback.dict()
+        
+        # Save the feedback
+        success = await meditation_orchestrator.collect_feedback(user_id, feedback_dict)
+        
+        if success:
+            return {
+                "status": "success",
+                "message": "Thank you for your feedback! We'll use it to improve your future meditation recommendations."
+            }
+        else:
+            return {
+                "status": "error",
+                "message": "We couldn't save your feedback at this time. Please try again later."
+            }
+    except Exception as e:
+        # For debugging purposes, log the error
+        import logging
+        logging.error(f"Error saving feedback: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to save feedback: {str(e)}")
 
 @app.get("/available-moods")
 async def available_moods():

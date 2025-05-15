@@ -1,18 +1,16 @@
 """
 MeditationOrchestrator module for coordinating the meditation generation workflow.
-This module orchestrates the process of finding, downloading, and checking meditation audio.
+This module orchestrates the process of finding and serving meditation videos.
 """
 
 import os
 import logging
-import tempfile
-import shutil
 from pathlib import Path
 import asyncio
 
-from app.agents.audio_retriever import AudioRetrieverAgent
-from app.agents.audio_downloader import AudioDownloaderAgent
-from app.agents.audio_quality_checker import AudioQualityCheckerAgent
+from app.agents.openai_meditation_agent import OpenAIMeditationAgent
+from app.agents.feedback_collector import FeedbackCollectorAgent
+from app.utils.db import save_meditation_session
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -20,234 +18,170 @@ logger = logging.getLogger(__name__)
 
 class MeditationOrchestrator:
     """
-    Orchestrator that coordinates the workflow between meditation generation agents.
-    Manages the full process from finding meditation URLs to delivering final audio files.
+    Orchestrator that coordinates finding meditation videos and collecting feedback.
+    Uses OpenAI to find YouTube videos for meditation based on mood.
     """
     
-    def __init__(self, language="english", cache_dir=None):
+    def __init__(self, language="english"):
         """
         Initialize the meditation orchestrator and its component agents.
         
         Args:
             language: Default language for meditations (english or french)
-            cache_dir: Directory to cache downloaded audio files
         """
         # Set default language
         self.language = language
         
-        # Set up cache directory
-        if cache_dir is None:
-            self.cache_dir = Path(__file__).parent.parent / "assets" / "cached_audio"
-        else:
-            self.cache_dir = Path(cache_dir)
+        # Initialize agents
+        self.openai_agent = OpenAIMeditationAgent()
+        self.feedback_collector = FeedbackCollectorAgent()
         
-        # Create cache directory if it doesn't exist
-        os.makedirs(self.cache_dir, exist_ok=True)
-        
-        # Initialize all agents
-        self.retriever = AudioRetrieverAgent(cache_dir=self.cache_dir)
-        self.downloader = AudioDownloaderAgent(cache_dir=self.cache_dir)
-        self.quality_checker = AudioQualityCheckerAgent()
-        
-        # Maximum number of attempts to find a good meditation
-        self.max_attempts = 5  # Increased from 3 to give more chances to find working audio
+        # Track the current meditation metadata
+        self.current_meditation = None
     
-    async def generate_meditation(self, mood, language=None, output_path=None):
+    async def generate_meditation(self, mood, language=None):
         """
         Generate a meditation based on the provided mood.
         
-        This method orchestrates the full workflow:
-        1. Find a meditation audio URL using the AudioRetrieverAgent
-        2. Download the audio using the AudioDownloaderAgent
-        3. Check the audio quality using the AudioQualityCheckerAgent
-        4. Optionally trim or adjust the audio if needed
+        This method uses OpenAI to find a YouTube meditation video:
+        1. Ask OpenAI for a YouTube URL based on mood and language
+        2. Format the response for embedding in the web app
+        3. Save the meditation session to the database
         
         Args:
             mood: The mood to base the meditation on
             language: Language preference (defaults to the instance language)
-            output_path: Optional path to save the meditation
             
         Returns:
-            Tuple containing (path to the final meditation audio file, source information)
+            Dictionary containing YouTube URL and metadata
         """
         # Use instance language if none provided
         language = language or self.language
-        logger.info(f"Generating meditation for mood: {mood}, language: {language}")
+        logger.info(f"Finding meditation for mood: {mood}, language: {language}")
         
-        # Create a temporary file if no output path provided
-        if not output_path:
-            temp_file = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False)
-            output_path = temp_file.name
-            temp_file.close()
-        
-        # Store temporary files to clean up later
-        temp_files = []
-        final_audio_path = None
-        source_info = None
-        
-        # Track previously failed URLs to avoid reusing them
-        failed_urls = set()
-        
-        # Try multiple attempts to find a suitable meditation
-        for attempt in range(1, self.max_attempts + 1):
-            try:
-                logger.info(f"Attempt {attempt}/{self.max_attempts} to find a suitable meditation")
-                
-                # Step 1: Find a meditation audio URL (that hasn't failed before)
-                meditation_url = None
-                max_url_attempts = 3  # Maximum number of attempts to find a new URL
-                for url_attempt in range(1, max_url_attempts + 1):
-                    # The retrieval might now return a tuple (url, info)
-                    retrieval_result = await self.retriever.find_meditation(mood, language)
-                    
-                    if isinstance(retrieval_result, tuple):
-                        meditation_url = retrieval_result[0]
-                        source_info = retrieval_result[1]
-                    else:
-                        meditation_url = retrieval_result
-                        source_info = None
-                    
-                    if meditation_url not in failed_urls:
-                        logger.info(f"Found new meditation URL: {meditation_url}")
-                        break
-                    logger.warning(f"URL has failed before, trying another one (attempt {url_attempt}/{max_url_attempts})")
-                
-                if meditation_url in failed_urls:
-                    logger.warning("Couldn't find a new URL after multiple attempts, using the last one anyway")
-                
-                logger.info(f"Using meditation URL: {meditation_url}")
-                
-                # Step 2: Download the meditation audio
-                audio_path = await self.downloader.download_audio(meditation_url, mood, language)
-                logger.info(f"Downloaded meditation audio to: {audio_path}")
-                temp_files.append(audio_path)
-                
-                # Check if this is a fallback audio file (which indicates download failed)
-                if "fallback" in audio_path or "error" in audio_path or os.path.getsize(audio_path) < 10240:  # Less than 10KB
-                    failed_urls.add(meditation_url)
-                    logger.warning(f"Download failed or resulted in a small file for URL: {meditation_url}, added to failed URLs")
-                    continue  # Skip quality check and try another URL
-                
-                # Step 3: Check audio quality
-                is_acceptable, quality_details = await self.quality_checker.check_quality(audio_path)
-                
-                # If quality is acceptable or we're on our last attempt, use this file
-                if is_acceptable or attempt == self.max_attempts:
-                    logger.info(f"Audio quality acceptable: {is_acceptable}")
-                    logger.info(f"Quality details: {quality_details}")
-                    
-                    # If the audio is too long, trim it
-                    if quality_details.get("duration_minutes", 0) > 12:
-                        logger.info("Audio is too long, trimming...")
-                        trimmed_path = await self.quality_checker.trim_audio_if_needed(audio_path)
-                        if trimmed_path != audio_path:
-                            temp_files.append(trimmed_path)
-                            audio_path = trimmed_path
-                    
-                    # Copy to output path if needed
-                    if audio_path != output_path:
-                        shutil.copy2(audio_path, output_path)
-                    
-                    final_audio_path = output_path
-                    
-                    if is_acceptable:
-                        logger.info("Found acceptable meditation audio, stopping search")
-                        break
-                    else:
-                        logger.warning("Using last attempt meditation despite quality issues")
-                else:
-                    logger.warning(f"Rejected audio due to quality issues: {quality_details.get('issues', [])}")
-                    # Add URL to failed list to avoid reusing it
-                    failed_urls.add(meditation_url)
-                    # Continue to next attempt
+        try:
+            # Find a meditation video URL using OpenAI
+            youtube_url, source_info = await self.openai_agent.find_meditation(mood, language)
             
-            except Exception as e:
-                logger.error(f"Error in attempt {attempt}: {str(e)}")
-                # If we've identified a URL, mark it as failed
-                if meditation_url:
-                    failed_urls.add(meditation_url)
-                # Continue to next attempt
-        
-        # If we couldn't find a suitable file after all attempts
-        if final_audio_path is None:
-            logger.warning("Failed to find a suitable meditation after all attempts")
+            # Add mood to the metadata for feedback
+            if source_info:
+                track_metadata = {
+                    'title': source_info.get('title', 'Meditation Video'),
+                    'artist': 'YouTube Creator',
+                    'mood': mood,
+                    'youtube_url': youtube_url,
+                    'duration_ms': 600000  # Default 10 minutes
+                }
+                
+                # Store current meditation for feedback collection
+                self.current_meditation = track_metadata
             
-            # Use the last downloaded file as a fallback if available and reasonably sized
-            valid_files = []
-            for temp_file in temp_files:
-                try:
-                    if os.path.exists(temp_file) and os.path.getsize(temp_file) > 10240:  # Larger than 10KB
-                        valid_files.append(temp_file)
-                except Exception:
-                    # Skip files that can't be checked
-                    pass
-                    
-            if valid_files:
-                last_file = valid_files[-1]
-                if os.path.exists(last_file):
-                    logger.info(f"Using last valid file as fallback: {last_file}")
-                    if last_file != output_path:
-                        shutil.copy2(last_file, output_path)
-                    final_audio_path = output_path
+            # Save the meditation session to the database immediately
+            await save_meditation_session(
+                mood=mood,
+                language=language,
+                youtube_url=youtube_url,
+                audio_url=None
+            )
             
-            # If we still don't have a valid file, try one more time with the new reliable URL
-            if final_audio_path is None or os.path.getsize(final_audio_path) < 10240:
-                logger.warning("Attempting one last guaranteed fallback URL")
-                try:
-                    # Use a guaranteed working meditation URL from UCLA (for French)
-                    if language and language.lower() == "french":
-                        fallback_url = "https://d1cy5zxxhbcbkk.cloudfront.net/guided-meditations/French-breathing.mp3"
-                        logger.info("Using UCLA French meditation as fallback")
-                    else:
-                        # Try a general YouTube meditation
-                        fallback_result = await self.retriever._search_youtube("meditation music")
-                        if fallback_result and len(fallback_result) > 0:
-                            fallback_url = fallback_result[0]
-                            logger.info(f"Using YouTube meditation as fallback: {fallback_url}")
-                        else:
-                            fallback_url = "https://d1cy5zxxhbcbkk.cloudfront.net/guided-meditations/French-breathing.mp3"
-                            logger.info("Using UCLA meditation as backup fallback")
-                    
-                    audio_path = await self.downloader.download_audio(fallback_url, mood, language)
-                    if audio_path and os.path.exists(audio_path) and os.path.getsize(audio_path) > 10240:
-                        if audio_path != output_path:
-                            shutil.copy2(audio_path, output_path)
-                        final_audio_path = output_path
-                        temp_files.append(audio_path)
-                        
-                        # Update source_info for the fallback
-                        if 'youtube.com' in fallback_url or 'youtu.be' in fallback_url:
-                            source_info = {
-                                'youtube_url': fallback_url,
-                                'title': 'Fallback Meditation Audio'
-                            }
-                except Exception as e:
-                    logger.error(f"Error using fallback URL: {str(e)}")
-        
-        # Clean up temporary files except the final one
-        for temp_file in temp_files:
-            try:
-                if temp_file != final_audio_path and os.path.exists(temp_file):
-                    os.unlink(temp_file)
-            except Exception as e:
-                logger.error(f"Error cleaning up temporary file {temp_file}: {str(e)}")
-        
-        # If we have a final audio file, return it along with source info
-        if final_audio_path and os.path.exists(final_audio_path):
-            logger.info(f"Meditation generation complete: {final_audio_path}")
-            return (final_audio_path, source_info) if source_info else final_audio_path
+            logger.info(f"Found and saved meditation video URL: {youtube_url}")
             
-        # If all else fails, return a guaranteed system fallback
-        fallback_file = self._get_or_create_fallback(mood, language)
-        logger.warning(f"Using system fallback file: {fallback_file}")
-        if fallback_file != output_path:
-            shutil.copy2(fallback_file, output_path)
+            # Return the YouTube URL and metadata
+            return youtube_url, source_info
+            
+        except Exception as e:
+            logger.error(f"Error generating meditation: {str(e)}")
+            
+            # Fallback URL if there's an error
+            fallback_url = "https://www.youtube.com/watch?v=O-6f5wQXSu8"
+            fallback_info = {
+                'youtube_url': fallback_url,
+                'title': 'Fallback Meditation Video'
+            }
+            
+            # Set current meditation metadata for the fallback
+            self.current_meditation = {
+                'title': 'Fallback Meditation',
+                'artist': 'Daily Meditation',
+                'mood': mood,
+                'youtube_url': fallback_url,
+                'duration_ms': 600000  # 10 minutes
+            }
+            
+            return fallback_url, fallback_info
+    
+    async def collect_feedback(self, user_id, feedback_responses):
+        """
+        Collect and save user feedback about the meditation.
         
-        return output_path
+        Args:
+            user_id: Identifier for the user
+            feedback_responses: Dictionary of user responses to feedback questions
+            
+        Returns:
+            Boolean indicating success
+        """
+        if not self.current_meditation:
+            logger.warning("No current meditation data available for feedback")
+            return False
+        
+        # Add user ID to feedback data
+        feedback_responses['user_id'] = user_id
+        
+        # Save the feedback using the feedback collector
+        success = self.feedback_collector.save_feedback(feedback_responses, self.current_meditation)
+        
+        if success:
+            logger.info(f"Saved feedback from user {user_id}")
+            
+            # Process the feedback with the OpenAI agent to improve future recommendations
+            await self.openai_agent.process_feedback(feedback_responses, self.current_meditation)
+        else:
+            logger.error(f"Failed to save feedback from user {user_id}")
+        
+        return success
+    
+    def get_feedback_questions(self):
+        """
+        Get feedback questions for the current meditation.
+        
+        Returns:
+            List of feedback questions
+        """
+        return self.feedback_collector.get_feedback_questions(self.current_meditation)
+    
+    def should_show_feedback_form(self, user_id):
+        """
+        Determine if feedback form should be shown to the user.
+        
+        Args:
+            user_id: User identifier
+            
+        Returns:
+            Boolean indicating if feedback form should be shown
+        """
+        return self.feedback_collector.should_show_feedback_form(user_id)
     
     async def close(self):
         """
-        Close all resources used by the orchestrator and its agents.
+        Clean up resources when shutting down.
         """
-        if hasattr(self.downloader, 'close'):
-            await self.downloader.close() 
+        # Any cleanup tasks needed
+        pass
+    
+    def _get_or_create_fallback(self, mood, language):
+        """
+        Get a guaranteed fallback file path, creating the directory if it doesn't exist.
+        
+        Args:
+            mood: The mood for the fallback
+            language: The language for the fallback
+            
+        Returns:
+            Path to the fallback file
+        """
+        fallback_dir = self.cache_dir / "fallback"
+        os.makedirs(fallback_dir, exist_ok=True)
+        
+        # Use our simplest fallback
+        return str(Path(__file__).parent.parent / "assets" / "fallback_meditation.mp3") 

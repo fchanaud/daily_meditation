@@ -1,116 +1,236 @@
 {% extends "base.html" %}
 
+{% block title %}Daily Meditation - Find Your Perfect Meditation{% endblock %}
+
 {% block content %}
-<div class="mood-container">
-    <h2 class="mb-4">How are you feeling today?</h2>
-    <p class="mb-4">Select your mood to find a 10-minute meditation that matches how you feel:</p>
-    
-    <form id="mood-form" action="/generate-meditation" method="post">
-        <div class="mood-grid">
-            {% for mood in moods %}
-            <div class="mood-card" data-mood="{{ mood }}">
-                <div class="mood-icon">
-                    {% if mood == "calm" %}
-                    <i class="fas fa-water"></i>
-                    {% elif mood == "focused" %}
-                    <i class="fas fa-bullseye"></i>
-                    {% elif mood == "relaxed" %}
-                    <i class="fas fa-couch"></i>
-                    {% elif mood == "energized" %}
-                    <i class="fas fa-bolt"></i>
-                    {% elif mood == "grateful" %}
-                    <i class="fas fa-heart"></i>
-                    {% elif mood == "happy" %}
-                    <i class="fas fa-smile-beam"></i>
-                    {% elif mood == "peaceful" %}
-                    <i class="fas fa-dove"></i>
-                    {% elif mood == "confident" %}
-                    <i class="fas fa-crown"></i>
-                    {% elif mood == "creative" %}
-                    <i class="fas fa-palette"></i>
-                    {% elif mood == "compassionate" %}
-                    <i class="fas fa-hands-helping"></i>
-                    {% else %}
-                    <i class="fas fa-spa"></i>
-                    {% endif %}
+<div class="container py-5">
+    <div class="row mb-4">
+        <div class="col-lg-12 text-center">
+            <h1 class="display-4">Daily Meditation</h1>
+            <p class="lead">Select your mood to find the perfect meditation for you</p>
+        </div>
+    </div>
+
+    <div class="row mb-5">
+        <div class="col-lg-8 offset-lg-2">
+            <form id="mood-form">
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h3 class="mb-0">How are you feeling today?</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mood-cards">
+                            {% for mood in moods %}
+                            <div class="col-6 col-md-4 col-lg-3 mb-3">
+                                <div class="card mood-card" data-mood="{{ mood }}">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-{{ 'smile' if mood == 'happy' else 'heart' if mood == 'compassionate' else 'sun' if mood == 'energized' else 'cloud' if mood == 'peaceful' else 'brain' if mood == 'focused' else 'feather' if mood == 'relaxed' else 'lightbulb' if mood == 'creative' else 'star' if mood == 'confident' else 'hand-holding-heart' if mood == 'grateful' else 'spa' }} mood-icon"></i>
+                                        <h5 class="card-title mb-0 mt-2">{{ mood|capitalize }}</h5>
+                                        <input type="radio" name="mood" id="mood-{{ mood }}" value="{{ mood }}" class="visually-hidden">
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
                 </div>
-                <h5>{{ mood|title }}</h5>
-                <div class="form-check" style="display: none;">
-                    <input class="form-check-input mood-radio" type="radio" name="mood" id="mood-{{ mood }}" value="{{ mood }}">
+
+                <div class="card mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h3 class="mb-0">Select language</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="language" id="language-english" value="english" checked>
+                            <label class="form-check-label" for="language-english">
+                                English
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="language" id="language-french" value="french">
+                            <label class="form-check-label" for="language-french">
+                                French
+                            </label>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            {% endfor %}
+
+                <div class="mb-4 text-center">
+                    <button type="submit" id="submit-btn" class="btn btn-lg btn-primary" disabled>
+                        Find My Meditation
+                    </button>
+                </div>
+            </form>
         </div>
-        
-        <div class="language-selection mt-5 mb-4">
-            <h5>Choose your language:</h5>
-            <div class="form-check form-check-inline">
-                <input class="form-check-input" type="radio" name="language" id="language-english" value="english" checked>
-                <label class="form-check-label" for="language-english">English</label>
-            </div>
-            <div class="form-check form-check-inline">
-                <input class="form-check-input" type="radio" name="language" id="language-french" value="french">
-                <label class="form-check-label" for="language-french">French</label>
-            </div>
-        </div>
-        
-        <div class="text-center mt-4">
-            <button type="submit" class="btn btn-primary btn-lg" id="find-meditation" disabled>
-                Find My Meditation
-            </button>
-        </div>
-    </form>
-    
+    </div>
+
     <!-- Progress indicator -->
-    <div id="progress-container" class="mt-4" style="display: none;">
-        <div class="progress">
-            <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%"></div>
+    <div id="progress-container" class="row mb-4" style="display: none;">
+        <div class="col-lg-8 offset-lg-2">
+            <div class="progress" style="height: 30px;">
+                <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated bg-primary" role="progressbar" style="width: 0%"></div>
+            </div>
+            <p id="progress-stage" class="text-center mt-2">Searching for the perfect meditation...</p>
         </div>
-        <p id="progress-stage" class="text-center mt-2">Searching for the perfect meditation...</p>
+    </div>
+
+    <!-- Response message -->
+    <div id="response-container" class="row mb-4" style="display: none;">
+        <div class="col-lg-8 offset-lg-2">
+            <div class="alert alert-success">
+                <h4 id="response-message">Your meditation is ready!</h4>
+                <p id="response-note">Find a quiet place, sit comfortably, and breathe deeply as you listen.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- YouTube embed player should be replaced with direct link button -->
+    <div id="youtube-player-container" class="row mb-4" style="display: none;">
+        <div class="col-lg-8 offset-lg-2">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 id="youtube-title" class="mb-0">Your Meditation Video</h3>
+                </div>
+                <div class="card-body text-center">
+                    <p class="mb-3">We've found a meditation video that matches your mood.</p>
+                    <a id="youtube-link" href="#" target="_blank" class="btn btn-lg btn-danger mb-3">
+                        <i class="fab fa-youtube mr-2"></i> Watch on YouTube
+                    </a>
+                    <p class="small text-muted">The video will open in a new tab. When you finish watching, please come back here to provide feedback.</p>
+                    <button id="show-feedback-btn" class="btn btn-primary mt-2">
+                        I've finished watching - Give Feedback
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
     
-    <!-- Response container -->
-    <div id="response-container" class="mt-4 text-center" style="display: none;">
-        <div class="alert alert-info">
-            <h4 id="response-title" class="alert-heading">Your meditation selection:</h4>
-            <p id="response-message"></p>
-            <hr>
-            <p class="mb-0" id="response-note"></p>
+    <!-- Feedback form -->
+    <div id="feedback-container" class="row mb-4" style="display: none;">
+        <div class="col-lg-8 offset-lg-2">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">How was your meditation?</h3>
+                </div>
+                <div class="card-body">
+                    <form id="feedback-form">
+                        <div class="mb-3">
+                            <label class="form-label">How would you rate today's meditation from 1-5?</label>
+                            <div class="rating-stars">
+                                <div class="d-flex justify-content-between">
+                                    {% for i in range(1, 6) %}
+                                    <div class="form-check">
+                                        <input class="form-check-input visually-hidden" type="radio" name="rating" id="rating-{{ i }}" value="{{ i }}">
+                                        <label class="form-check-label rating-star" for="rating-{{ i }}">
+                                            <i class="far fa-star"></i>
+                                        </label>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                <div class="d-flex justify-content-between mt-1">
+                                    <small>Not helpful</small>
+                                    <small>Amazing</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Did this meditation help with your mood?</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="improved_mood" id="improved-mood-yes" value="true">
+                                <label class="form-check-label" for="improved-mood-yes">Yes</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="improved_mood" id="improved-mood-no" value="false">
+                                <label class="form-check-label" for="improved-mood-no">No</label>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Would you like more meditations like this one?</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="want_similar" id="want-similar-yes" value="true">
+                                <label class="form-check-label" for="want-similar-yes">Yes</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="want_similar" id="want-similar-no" value="false">
+                                <label class="form-check-label" for="want-similar-no">No</label>
+                            </div>
+                        </div>
+                        
+                        <div id="additional-questions-container">
+                            <!-- Additional questions will be added dynamically -->
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="improvement-suggestions" class="form-label">What would make your meditation experience better?</label>
+                            <textarea class="form-control" id="improvement-suggestions" name="improvement_suggestions" rows="3"></textarea>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary">Submit Feedback</button>
+                    </form>
+                </div>
+            </div>
         </div>
-        
-        <!-- Audio player -->
-        <div id="audio-player-container" class="mt-4" style="display: none;">
-            <button id="force-play-button" class="btn btn-lg btn-primary mb-3 w-100">
-                <i class="fas fa-play"></i> Play Meditation
-            </button>
-            <audio id="meditation-audio" controls class="w-100">
-                <source id="meditation-source" src="" type="audio/mpeg">
-                <source id="meditation-source-mp4" src="" type="audio/mp4">
-                Your browser does not support the audio element.
-            </audio>
+    </div>
+
+    <!-- Feedback success message -->
+    <div id="feedback-success" class="row mb-4" style="display: none;">
+        <div class="col-lg-8 offset-lg-2">
+            <div class="alert alert-success">
+                <h4>Thank you for your feedback!</h4>
+                <p>We'll use your input to improve your future meditation recommendations.</p>
+            </div>
         </div>
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
+<!-- YouTube Player API script -->
+<script src="https://www.youtube.com/iframe_api"></script>
+
 <script>
+    let youtubePlayer = null;
+    let shouldShowFeedbackAfterVideo = false;
+    let feedbackQuestionsForYoutube = [];
+    
+    // YouTube Player API callback
+    function onYouTubeIframeAPIReady() {
+        console.log('YouTube Iframe API is ready');
+    }
+    
     document.addEventListener('DOMContentLoaded', function() {
-        // Get all mood cards
+        // Elements
         const moodCards = document.querySelectorAll('.mood-card');
-        const moodRadios = document.querySelectorAll('.mood-radio');
-        const submitButton = document.getElementById('find-meditation');
+        const submitButton = document.getElementById('submit-btn');
         const progressContainer = document.getElementById('progress-container');
         const progressBar = document.getElementById('progress-bar');
         const progressStage = document.getElementById('progress-stage');
         const responseContainer = document.getElementById('response-container');
         const responseMessage = document.getElementById('response-message');
         const responseNote = document.getElementById('response-note');
-        const audioPlayerContainer = document.getElementById('audio-player-container');
-        const meditationAudio = document.getElementById('meditation-audio');
-        const meditationSource = document.getElementById('meditation-source');
+        const feedbackContainer = document.getElementById('feedback-container');
+        const feedbackForm = document.getElementById('feedback-form');
+        const feedbackSuccess = document.getElementById('feedback-success');
+        const additionalQuestionsContainer = document.getElementById('additional-questions-container');
         
-        // Add click event to mood cards
+        // Rating stars functionality
+        const ratingStars = document.querySelectorAll('.rating-star');
+        ratingStars.forEach((star, index) => {
+            star.addEventListener('click', function() {
+                // Update the stars visually
+                ratingStars.forEach((s, i) => {
+                    if (i <= index) {
+                        s.innerHTML = '<i class="fas fa-star"></i>'; // Filled star
+                    } else {
+                        s.innerHTML = '<i class="far fa-star"></i>'; // Empty star
+                    }
+                });
+            });
+        });
+        
+        // Handle mood card selection
         moodCards.forEach(card => {
             card.addEventListener('click', function() {
                 // Remove selected class from all cards
@@ -148,14 +268,16 @@
             
             // Hide any previous response
             responseContainer.style.display = 'none';
-            audioPlayerContainer.style.display = 'none';
+            document.getElementById('youtube-player-container').style.display = 'none';
+            feedbackContainer.style.display = 'none';
+            feedbackSuccess.style.display = 'none';
             
             // Simulate progress updates (since we can't get real-time updates from the server)
             let progress = 0;
             const progressStages = [
-                'Searching for meditations that match your mood...',
-                'Finding high-quality audio sources...',
-                'Processing your meditation...',
+                'Asking OpenAI to find a meditation video for your mood...',
+                'Searching for the perfect YouTube meditation (8-15 minutes)...',
+                'Processing your meditation video...',
                 'Almost ready...'
             ];
             
@@ -208,74 +330,42 @@
                     responseNote.textContent = data.note;
                 }
                 
-                // Check if we have YouTube info first
-                if (data.source_info && data.source_info.youtube_url) {
-                    // Redirect directly to YouTube
-                    console.log('Redirecting to YouTube:', data.source_info.youtube_url);
-                    window.location.href = data.source_info.youtube_url;
-                    return; // Stop execution here since we're redirecting
-                }
-                
-                // Set up audio player with the meditation URL only if we're not redirecting to YouTube
-                if (data.audio_url) {
-                    // Clear any previous event listeners
-                    meditationAudio.oncanplay = null;
-                    meditationAudio.onerror = null;
+                // Set up YouTube embed if available 
+                if (data.youtube_url) {
+                    console.log('Setting YouTube URL:', data.youtube_url);
                     
-                    // Add audio event listeners
-                    meditationAudio.onerror = function(e) {
-                        console.error('Audio error:', e);
-                        alert('Error loading the meditation audio. Please try a different meditation.');
-                    };
+                    // Get YouTube container and elements
+                    const youtubeContainer = document.getElementById('youtube-player-container');
+                    const youtubeTitle = document.getElementById('youtube-title');
+                    const youtubeLink = document.getElementById('youtube-link');
+                    const showFeedbackBtn = document.getElementById('show-feedback-btn');
                     
-                    meditationAudio.oncanplay = function() {
-                        console.log('Audio is ready to play');
-                    };
+                    // Set the title if available
+                    if (data.source_info && data.source_info.title) {
+                        youtubeTitle.textContent = data.source_info.title;
+                    } else {
+                        youtubeTitle.textContent = 'Your Meditation Video';
+                    }
                     
-                    // Set the source and load the audio
-                    const absoluteAudioUrl = new URL(data.audio_url, window.location.origin).href;
-                    console.log('Setting absolute audio URLs:', absoluteAudioUrl);
-                    meditationSource.src = absoluteAudioUrl;
-                    document.getElementById('meditation-source-mp4').src = absoluteAudioUrl;
-                    meditationAudio.load(); // Reload the audio element
+                    // Set direct link to YouTube
+                    youtubeLink.href = data.youtube_url;
                     
-                    // Set up the play button - remove any existing listeners first
-                    const forcePlayButton = document.getElementById('force-play-button');
+                    // Store feedback settings for when user returns
+                    shouldShowFeedbackAfterVideo = data.should_show_feedback;
+                    feedbackQuestionsForYoutube = data.feedback_questions || [];
                     
-                    // Remove any existing event listeners by cloning and replacing the button
-                    const newPlayButton = forcePlayButton.cloneNode(true);
-                    forcePlayButton.parentNode.replaceChild(newPlayButton, forcePlayButton);
-                    
-                    // Add the event listener to the new button
-                    newPlayButton.addEventListener('click', function() {
-                        // Visual feedback when clicked
-                        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
-                        
-                        // Make sure the audio element has a valid source
-                        if (!meditationAudio.src || meditationAudio.src === window.location.href) {
-                            console.error('Audio source is not properly set');
-                            // Make sure we use an absolute URL with the current origin
-                            const absoluteUrl = new URL(data.audio_url, window.location.origin).href;
-                            meditationAudio.src = absoluteUrl;
-                            console.log('Setting absolute audio URL:', absoluteUrl);
-                            meditationAudio.load();
+                    // Add event listener to the feedback button
+                    showFeedbackBtn.addEventListener('click', function() {
+                        if (shouldShowFeedbackAfterVideo) {
+                            showFeedbackForm(feedbackQuestionsForYoutube);
                         }
-                        
-                        console.log('Attempting to play audio from:', meditationAudio.src);
-                        
-                        meditationAudio.play()
-                            .then(() => {
-                                // Reset button text once playing
-                                this.innerHTML = '<i class="fas fa-play"></i> Play Meditation';
-                            })
-                            .catch(e => {
-                                console.error('Play failed:', e);
-                                this.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Play Error';
-                                alert('Unable to play audio. Please check your browser settings or try again.');
-                            });
                     });
                     
-                    audioPlayerContainer.style.display = 'block';
+                    // Show the YouTube container
+                    youtubeContainer.style.display = 'block';
+                } else {
+                    // No video found
+                    alert('No suitable meditation video was found. Please try a different mood.');
                 }
                 
                 // Show the response container
@@ -310,6 +400,97 @@
                 submitButton.innerHTML = 'Find My Meditation';
             });
         });
+        
+        // Function to show the feedback form with dynamic questions
+        function showFeedbackForm(additionalQuestions) {
+            // Clear any existing additional questions
+            additionalQuestionsContainer.innerHTML = '';
+            
+            // Add any additional questions from the server
+            if (additionalQuestions && additionalQuestions.length > 0) {
+                additionalQuestions.forEach((question, index) => {
+                    if (!question.includes('rate today') && 
+                        !question.includes('help with your mood') && 
+                        !question.includes('more meditations like this') &&
+                        !question.includes('make your meditation experience better')) {
+                        
+                        const questionId = `additional-question-${index}`;
+                        const questionHTML = `
+                            <div class="mb-3">
+                                <label class="form-label">${question}</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="${questionId}" id="${questionId}-yes" value="true">
+                                    <label class="form-check-label" for="${questionId}-yes">Yes</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="${questionId}" id="${questionId}-no" value="false">
+                                    <label class="form-check-label" for="${questionId}-no">No</label>
+                                </div>
+                            </div>
+                        `;
+                        
+                        additionalQuestionsContainer.innerHTML += questionHTML;
+                    }
+                });
+            }
+            
+            // Show the feedback form
+            feedbackContainer.style.display = 'block';
+            feedbackContainer.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // Handle feedback form submission
+        feedbackForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Get form data
+            const formData = new FormData(this);
+            const feedbackData = {
+                rating: parseInt(formData.get('rating')),
+                improved_mood: formData.get('improved_mood') === 'true',
+                want_similar: formData.get('want_similar') === 'true',
+                improvement_suggestions: formData.get('improvement_suggestions')
+            };
+            
+            // Add additional question responses
+            document.querySelectorAll('[id^="additional-question-"]').forEach(input => {
+                if (input.checked) {
+                    const questionName = input.getAttribute('name');
+                    const isQuestion = questionName.startsWith('additional-question-');
+                    
+                    if (isQuestion) {
+                        feedbackData[questionName] = input.value === 'true';
+                    }
+                }
+            });
+            
+            // Submit feedback
+            fetch('/submit-feedback', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(feedbackData)
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                }
+                throw new Error('Network response was not ok');
+            })
+            .then(data => {
+                // Hide the feedback form
+                feedbackContainer.style.display = 'none';
+                
+                // Show success message
+                feedbackSuccess.style.display = 'block';
+                feedbackSuccess.scrollIntoView({ behavior: 'smooth' });
+            })
+            .catch(error => {
+                console.error('Error submitting feedback:', error);
+                alert('Failed to submit feedback. Please try again.');
+            });
+        });
     });
 </script>
-{% endblock %} 
+{% endblock %}
