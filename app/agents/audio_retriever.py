@@ -82,75 +82,47 @@ class AudioRetrieverAgent:
             "https://archive.org/details/mindfulness-meditation"
         ]
         
-        # Pre-vetted MP3 URLs that work and are of appropriate length
-        # Added more reliable direct URLs from different sources
-        self.pixabay_prevetted = {
+        # Free meditation MP3s from reliable sources (not Pixabay)
+        # These are unlikely to block with 403 errors as they're meant for free distribution
+        self.reliable_meditation_urls = {
             "calm": [
-                "https://cdn.pixabay.com/download/audio/2022/05/27/audio_1b8bebec68.mp3?filename=calm-meditation-126837.mp3",
-                "https://cdn.pixabay.com/download/audio/2021/04/07/audio_c8c4e9d068.mp3?filename=peaceful-garden-healing-light-piano-for-meditation-06-17606.mp3",
-                "https://cdn.pixabay.com/download/audio/2022/01/18/audio_f1e6e9b793.mp3?filename=relaxing-music-vol1-124477.mp3"
+                "https://www.freemindfulness.org/download/Breath%20meditation.mp3",
+                "https://www.freemindfulness.org/download/Mountain%20Meditation.mp3",
+                "https://www.freemindfulness.org/download/Three%20Minute%20Breathing%20Space%20-%20standard%20practice%20%28verbally%20guided%29.mp3"
             ],
             "focused": [
-                "https://cdn.pixabay.com/download/audio/2022/03/10/audio_c9d339a9c4.mp3?filename=ambient-piano-amp-strings-10711.mp3",
-                "https://cdn.pixabay.com/download/audio/2022/01/20/audio_333dfcfcb1.mp3?filename=mind-body-experience-144047.mp3",
-                "https://cdn.pixabay.com/download/audio/2021/09/06/audio_72291347f9.mp3?filename=focus-91459.mp3"
+                "https://www.freemindfulness.org/download/3-Minute%20Breathing%20Space%20meditation.mp3",
+                "https://www.freemindfulness.org/download/UCLAMindful%20Awareness%20of%20the%20Breath.mp3",
+                "https://www.freemindfulness.org/download/UCLAMindful%20Awareness%20of%20Body%20Sensations.mp3"
             ],
             "relaxed": [
-                "https://cdn.pixabay.com/download/audio/2022/05/26/audio_c835e4903f.mp3?filename=dreamy-imagination-14144.mp3",
-                "https://cdn.pixabay.com/download/audio/2021/11/01/audio_00fa5593e3.mp3?filename=nebula-144946.mp3",
-                "https://cdn.pixabay.com/download/audio/2021/03/29/audio_5d05bae3df.mp3?filename=deep-meditation-118978.mp3"
+                "https://www.freemindfulness.org/download/Body%20Scan.mp3",
+                "https://www.freemindfulness.org/download/Body%20Scan%20for%20Younger%20Children.mp3",
+                "https://www.freemindfulness.org/download/Finding%20Peace%20in%20a%20Frantic%20World%20-%20Chapter%205%20-%20Body%20Scan.mp3"
             ],
             "energized": [
-                "https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0c6c29ab2.mp3?filename=morning-garden-acoustic-chill-7111.mp3",
-                "https://cdn.pixabay.com/download/audio/2022/04/27/audio_db6de5f007.mp3?filename=relaxing-mountains-rivers-running-water-118762.mp3",
-                "https://cdn.pixabay.com/download/audio/2020/11/10/audio_38b45228a4.mp3?filename=morning-light-10279.mp3"
+                "https://www.freemindfulness.org/download/Mindful%20Movement.mp3",
+                "https://www.freemindfulness.org/download/UCLAMindful%20Walking%20Step%20by%20Step.mp3",
+                "https://www.freemindfulness.org/download/UCLAMindful%20Complete%20Meditation.mp3"
             ],
             "grateful": [
-                "https://cdn.pixabay.com/download/audio/2021/04/02/audio_20f547a915.mp3?filename=nature-soundtrack-10276.mp3",
-                "https://cdn.pixabay.com/download/audio/2021/09/09/audio_8cb658d098.mp3?filename=new-beginning-122115.mp3",
-                "https://cdn.pixabay.com/download/audio/2022/01/17/audio_ad49092553.mp3?filename=let-it-go-12279.mp3"
-            ],
-            "happy": [
-                "https://cdn.pixabay.com/download/audio/2021/04/07/audio_1650e79ce1.mp3?filename=lofi-study-112191.mp3",
-                "https://cdn.pixabay.com/download/audio/2022/06/10/audio_13b479fbce.mp3?filename=positive-mindfulness-137051.mp3",
-                "https://cdn.pixabay.com/download/audio/2022/01/14/audio_ea67cd20c6.mp3?filename=sunset-vibes-lo-fi-8912.mp3"
-            ],
-            "peaceful": [
-                "https://cdn.pixabay.com/download/audio/2021/03/08/audio_d8eb8cdefd.mp3?filename=beautiful-light-piano-for-media-9883.mp3",
-                "https://cdn.pixabay.com/download/audio/2021/03/08/audio_83607df9e7.mp3?filename=dream-meditation-125764.mp3",
-                "https://cdn.pixabay.com/download/audio/2022/04/08/audio_34accdeecf.mp3?filename=the-cradle-of-your-soul-20931.mp3"
-            ],
-            "confident": [
-                "https://cdn.pixabay.com/download/audio/2022/03/17/audio_5e6ae3f010.mp3?filename=cinematic-inspirational-piano-143281.mp3",
-                "https://cdn.pixabay.com/download/audio/2022/01/18/audio_c54a9d9988.mp3?filename=driving-motivation-143945.mp3",
-                "https://cdn.pixabay.com/download/audio/2022/02/07/audio_fb3da29ade.mp3?filename=be-motivated-7091.mp3"
-            ],
-            "creative": [
-                "https://cdn.pixabay.com/download/audio/2021/11/25/audio_68669c6839.mp3?filename=lofi-chill-14093.mp3",
-                "https://cdn.pixabay.com/download/audio/2022/05/17/audio_4f55b11471.mp3?filename=floating-meditation-ambient-7683.mp3",
-                "https://cdn.pixabay.com/download/audio/2021/04/08/audio_ede0241c6f.mp3?filename=dreaming-of-nature-114481.mp3"
-            ],
-            "compassionate": [
-                "https://cdn.pixabay.com/download/audio/2021/03/08/audio_d6aa03cdb0.mp3?filename=healing-meditation-10-min-112224.mp3",
-                "https://cdn.pixabay.com/download/audio/2021/04/28/audio_90fb5a3eb7.mp3?filename=dream-your-dreams-6677.mp3",
-                "https://cdn.pixabay.com/download/audio/2022/01/13/audio_a6ab69e8d6.mp3?filename=a-small-miracle-132128.mp3"
+                "https://www.freemindfulness.org/download/Kindness%20Meditation.mp3",
+                "https://www.freemindfulness.org/download/UCLAMindful%20Loving%20Kindness%20Meditation.mp3",
+                "https://www.freemindfulness.org/download/Finding%20Peace%20in%20a%20Frantic%20World%20-%20Chapter%208%20-%20Mindfulness%20of%20the%20Body%20and%20Breath%20and%20Mindful%20Movement.mp3"
             ],
             "default": [
-                "https://cdn.pixabay.com/download/audio/2022/05/27/audio_1b8bebec68.mp3?filename=calm-meditation-126837.mp3",
-                "https://cdn.pixabay.com/download/audio/2021/11/01/audio_3702db7734.mp3?filename=time-pass-143246.mp3",
-                "https://cdn.pixabay.com/download/audio/2021/04/07/audio_c8c4e9d068.mp3?filename=peaceful-garden-healing-light-piano-for-meditation-06-17606.mp3",
-                "https://cdn.pixabay.com/download/audio/2022/01/14/audio_ea67cd20c6.mp3?filename=sunset-vibes-lo-fi-8912.mp3"
+                "https://www.freemindfulness.org/download/Breath%20meditation.mp3",
+                "https://www.freemindfulness.org/download/Body%20Scan.mp3",
+                "https://www.freemindfulness.org/download/Mindful%20Movement.mp3",
+                "https://www.freemindfulness.org/download/Mountain%20Meditation.mp3"
             ]
         }
         
-        # Free meditation MP3s from other reliable sources
+        # Additional sources from public domain and Creative Commons sites
         self.additional_sources = [
-            "https://www.freemindfulness.org/download/Breath%20meditation.mp3",
-            "https://www.freemindfulness.org/download/3-Minute%20Breathing%20Space%20meditation.mp3",
-            "https://www.freemindfulness.org/download/Body%20Scan%20for%20Younger%20Children.mp3",
-            "https://www.freemindfulness.org/download/Body%20Scan.mp3",
-            "https://www.freemindfulness.org/download/Mindful%20Movement.mp3",
-            "https://www.freemindfulness.org/download/Mountain%20Meditation.mp3"
+            "https://publicdomainreview.org/collection/meditation-audio",
+            "https://freesound.org/search/?q=meditation&f=&s=score+desc&advanced=0&g=1",
+            "https://soundbible.com/search.php?q=meditation"
         ]
     
     async def find_meditation(self, mood, language="english"):
@@ -178,30 +150,28 @@ class AudioRetrieverAgent:
         if language.lower() != "english":
             queries = [f"{q} {language}" for q in queries]
         
+        # USE HIGHLY RELIABLE SOURCES FIRST (with almost no chance of 403)
+        # Try reliable meditation URLs first (these are from sources specifically allowing downloads)
+        logger.info(f"Trying reliable meditation URLs for mood: {mood}")
+        mood_urls = self.reliable_meditation_urls.get(mood, self.reliable_meditation_urls["default"])
+        if mood_urls:
+            # Return a random reliable URL
+            chosen_url = random.choice(mood_urls)
+            logger.info(f"Using reliable meditation URL: {chosen_url}")
+            return chosen_url
+            
+        # If reliable URLs don't match or aren't available, try more options
         # Choose source with weighted probability:
-        # - 70% chance to use pre-vetted URLs (highest success rate)
-        # - 15% chance to try Archive.org
-        # - 10% chance to use additional sources
-        # - 5% chance to try Pixabay scraping
+        # - 70% chance to try Archive.org (much more reliable than Pixabay)
+        # - 20% chance to use additional sources
+        # - 10% chance to try Pixabay (reduced chance due to 403 errors)
         source_choice = random.choices(
-            ["prevetted", "archive", "additional", "pixabay"],
-            weights=[70, 15, 10, 5],
+            ["archive", "additional", "pixabay"],
+            weights=[70, 20, 10],
             k=1
         )[0]
         
-        if source_choice == "prevetted":
-            # Try pre-vetted URLs first (these are known to work)
-            logger.info(f"Trying pre-vetted URLs for mood: {mood}")
-            mood_urls = self.pixabay_prevetted.get(mood, self.pixabay_prevetted["default"])
-            if mood_urls:
-                return random.choice(mood_urls)
-        
-        elif source_choice == "additional":
-            # Try additional source URLs
-            logger.info("Trying additional meditation sources")
-            return random.choice(self.additional_sources)
-        
-        elif source_choice == "archive":
+        if source_choice == "archive":
             # Try Archive.org collections directly
             logger.info("Trying Archive.org collections")
             for collection_url in random.sample(self.archive_collections, min(3, len(self.archive_collections))):
@@ -211,7 +181,7 @@ class AudioRetrieverAgent:
                     return audio_url
                 await asyncio.sleep(0.5)
                 
-            # If no Archive.org audio found, try searching
+            # If no Archive.org collection audio found, try searching
             for query in queries:
                 logger.info(f"Searching Archive.org with query: {query}")
                 audio_url = await self._scrape_archive_org(query)
@@ -219,9 +189,16 @@ class AudioRetrieverAgent:
                     logger.info(f"Found meditation audio URL on Archive.org: {audio_url}")
                     return audio_url
                 await asyncio.sleep(0.5)
-                
+        
+        elif source_choice == "additional":
+            # Try to scrape additional sources
+            logger.info("Trying additional meditation sources")
+            # For now, just default to our reliable URLs since scraping these would require
+            # custom parsers for each site
+            return random.choice(self.reliable_meditation_urls["default"])
+        
         elif source_choice == "pixabay":
-            # Try Pixabay scraping
+            # Try Pixabay scraping (with low chance of success due to 403s)
             for query in queries:
                 logger.info(f"Searching Pixabay with query: {query}")
                 audio_url = await self._scrape_pixabay(query)
@@ -230,9 +207,9 @@ class AudioRetrieverAgent:
                     return audio_url
                 await asyncio.sleep(0.5)
         
-        # If we still haven't found anything, use a fallback URL
-        logger.warning("Couldn't find meditation audio with selected method, using fallback URL")
-        return self._get_fallback_url(mood)
+        # Last resort fallback - if we couldn't find anything using any method
+        logger.warning("No sources worked, using ultimate fallback URL")
+        return self.reliable_meditation_urls["default"][0]
     
     async def _scrape_pixabay(self, query):
         """
@@ -272,22 +249,16 @@ class AudioRetrieverAgent:
             response = session.get(search_url, headers=headers, timeout=10)
             
             if response.status_code == 403:
-                logger.warning("Received 403 from Pixabay, trying alternative approach")
-                
-                # Try using pre-vetted URLs instead
+                logger.warning("Received 403 from Pixabay, falling back to reliable sources")
+                # Since we're getting 403s from Pixabay, use our reliable sources instead
                 mood_from_query = self._extract_mood_from_query(query)
-                if mood_from_query in self.pixabay_prevetted:
-                    urls = self.pixabay_prevetted[mood_from_query]
-                    if urls:
-                        return random.choice(urls)
-                
-                # Fall back to default prevetted URLs
-                if self.pixabay_prevetted["default"]:
-                    return random.choice(self.pixabay_prevetted["default"])
-                
-                return None
+                return random.choice(self.reliable_meditation_urls.get(mood_from_query, self.reliable_meditation_urls["default"]))
             
-            response.raise_for_status()
+            if response.status_code != 200:
+                logger.warning(f"Pixabay returned status code {response.status_code}, falling back to reliable sources")
+                mood_from_query = self._extract_mood_from_query(query)
+                return random.choice(self.reliable_meditation_urls.get(mood_from_query, self.reliable_meditation_urls["default"]))
+            
             soup = BeautifulSoup(response.text, 'html.parser')
             
             # Look for audio elements on Pixabay
@@ -299,7 +270,7 @@ class AudioRetrieverAgent:
                 duration_elem = audio_container.select_one('.duration')
                 if duration_elem:
                     duration_text = duration_elem.text.strip()
-                    # Look for durations between 8-12 minutes
+                    # Look for durations between 8-15 minutes
                     if self._is_duration_suitable(duration_text):
                         # Find the download link in this container
                         download_btn = audio_container.select_one('a.download-button')
@@ -326,7 +297,7 @@ class AudioRetrieverAgent:
                             if 'duration' in track and 'high_mp3' in track:
                                 duration_sec = track.get('duration', 0)
                                 # Check if duration is around 10 minutes (600 seconds)
-                                if 480 <= duration_sec <= 720:  # 8-12 minutes
+                                if 480 <= duration_sec <= 900:  # 8-15 minutes
                                     audio_links.append(track['high_mp3'])
                 except (json.JSONDecodeError, AttributeError):
                     continue
@@ -335,10 +306,16 @@ class AudioRetrieverAgent:
             if audio_links:
                 return random.choice(audio_links)
             
+            # If no links found on Pixabay, use reliable sources
+            logger.warning("No suitable audio found on Pixabay, falling back to reliable sources")
+            mood_from_query = self._extract_mood_from_query(query)
+            return random.choice(self.reliable_meditation_urls.get(mood_from_query, self.reliable_meditation_urls["default"]))
+            
         except Exception as e:
             logger.error(f"Error scraping Pixabay: {str(e)}")
-        
-        return None
+            # On any error, fall back to reliable sources
+            mood_from_query = self._extract_mood_from_query(query)
+            return random.choice(self.reliable_meditation_urls.get(mood_from_query, self.reliable_meditation_urls["default"]))
     
     async def _scrape_archive_org(self, query):
         """
@@ -634,30 +611,4 @@ class AudioRetrieverAgent:
                 if keyword in query_lower:
                     return mood
         
-        return "default"
-    
-    def _get_fallback_url(self, mood):
-        """
-        Get a fallback URL for a given mood.
-        
-        Args:
-            mood: Mood
-            
-        Returns:
-            Fallback URL
-        """
-        # Use pre-vetted Pixabay URLs if available
-        if mood in self.pixabay_prevetted and self.pixabay_prevetted[mood]:
-            return random.choice(self.pixabay_prevetted[mood])
-            
-        # Dictionary of fallback URLs from Archive.org and Pixabay
-        fallback_urls = {
-            "calm": "https://cdn.pixabay.com/download/audio/2022/05/27/audio_1b8bebec68.mp3?filename=calm-meditation-126837.mp3",
-            "focused": "https://cdn.pixabay.com/download/audio/2022/03/10/audio_c9d339a9c4.mp3?filename=ambient-piano-amp-strings-10711.mp3",
-            "relaxed": "https://cdn.pixabay.com/download/audio/2022/05/26/audio_c835e4903f.mp3?filename=dreamy-imagination-14144.mp3",
-            "energized": "https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0c6c29ab2.mp3?filename=morning-garden-acoustic-chill-7111.mp3",
-            "peaceful": "https://cdn.pixabay.com/download/audio/2021/11/25/audio_0a1dcd2f51.mp3?filename=peaceful-meditation-143862.mp3",
-            "default": "https://cdn.pixabay.com/download/audio/2021/11/25/audio_0a1dcd2f51.mp3?filename=peaceful-meditation-143862.mp3"
-        }
-        
-        return fallback_urls.get(mood, fallback_urls["default"]) 
+        return "default" 

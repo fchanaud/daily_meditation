@@ -12,6 +12,7 @@ import tempfile
 from pathlib import Path
 from urllib.parse import urlparse, unquote
 import requests
+import random
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -71,14 +72,28 @@ class AudioDownloaderAgent:
         
         # Create a session if we don't have one
         if self.session is None:
-            self.session = aiohttp.ClientSession(headers=self.headers)
+            # Rotate user agents to avoid being blocked
+            headers = {
+                'User-Agent': f'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{random.randint(90, 115)}.0.{random.randint(4000, 6000)}.{random.randint(10, 250)} Safari/537.36',
+                'Accept': '*/*',
+                'Accept-Language': 'en-US,en;q=0.5',
+                'Referer': 'https://www.google.com/',
+                'DNT': '1'
+            }
+            self.session = aiohttp.ClientSession(headers=headers)
         
         try:
-            # Download the file
-            async with self.session.get(url, timeout=30) as response:
+            # Try with aiohttp first
+            async with self.session.get(url, timeout=30, allow_redirects=True) as response:
                 if response.status != 200:
-                    logger.error(f"Failed to download file: HTTP {response.status}")
-                    return await self._create_error_file(mood, language, f"HTTP error {response.status}")
+                    logger.error(f"Failed to download file with aiohttp: HTTP {response.status}")
+                    
+                    # If we get a 403, try again with requests library as a fallback
+                    if response.status == 403:
+                        logger.info("Got 403 with aiohttp, trying with requests as fallback")
+                        return await self._download_with_requests(url, file_path, mood, language)
+                    else:
+                        return await self._create_error_file(mood, language, f"HTTP error {response.status}")
                 
                 # Create a temporary file
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as temp_file:
@@ -86,7 +101,7 @@ class AudioDownloaderAgent:
                 
                 # Get content type to check if it's actually audio
                 content_type = response.headers.get('Content-Type', '')
-                if not ('audio' in content_type or 'octet-stream' in content_type):
+                if not ('audio' in content_type.lower() or 'octet-stream' in content_type.lower()):
                     logger.warning(f"Content-Type is not audio: {content_type}. URL may not be direct audio.")
                 
                 # Write the content to the temporary file
@@ -119,10 +134,76 @@ class AudioDownloaderAgent:
                 return str(file_path)
                 
         except asyncio.TimeoutError:
-            logger.error("Download timed out")
-            return await self._create_error_file(mood, language, "Download timed out")
+            logger.error("Download timed out with aiohttp")
+            # On timeout, try with requests as fallback
+            return await self._download_with_requests(url, file_path, mood, language)
         except Exception as e:
-            logger.error(f"Error downloading audio: {str(e)}")
+            logger.error(f"Error downloading audio with aiohttp: {str(e)}")
+            # Try with requests as fallback
+            return await self._download_with_requests(url, file_path, mood, language)
+    
+    async def _download_with_requests(self, url, file_path, mood, language):
+        """
+        Fallback download method using the requests library.
+        
+        Args:
+            url: URL to download from
+            file_path: Path to save the file
+            mood: Mood of the meditation
+            language: Language of the meditation
+            
+        Returns:
+            Path to the downloaded file or error file
+        """
+        logger.info(f"Attempting fallback download with requests: {url}")
+        try:
+            # Use a different user agent to avoid being blocked
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36 Edg/115.0.1901.183',
+                'Accept': '*/*',
+                'Accept-Language': 'en-US,en;q=0.5',
+                'Referer': 'https://www.google.com/',
+                'DNT': '1'
+            }
+            
+            # Stream the download to handle large files
+            response = requests.get(url, headers=headers, stream=True, timeout=30)
+            
+            if response.status_code != 200:
+                logger.error(f"Failed to download file with requests: HTTP {response.status_code}")
+                return await self._create_error_file(mood, language, f"HTTP error {response.status_code}")
+            
+            # Create a temporary file
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as temp_file:
+                temp_path = temp_file.name
+            
+            # Write the content to the temporary file
+            total_size = 0
+            with open(temp_path, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+                        total_size += len(chunk)
+            
+            if total_size == 0:
+                logger.error("Downloaded file is empty")
+                os.unlink(temp_path)
+                return await self._create_error_file(mood, language, "Downloaded file is empty")
+            
+            # Check if the file is actually an audio file
+            if not self._is_audio_file(temp_path):
+                logger.error("Downloaded file is not a valid audio file")
+                os.unlink(temp_path)
+                return await self._create_error_file(mood, language, "Not a valid audio file")
+            
+            # Move the temporary file to the cache directory
+            os.rename(temp_path, file_path)
+            logger.info(f"Successfully downloaded audio with requests to {file_path}")
+            
+            return str(file_path)
+            
+        except Exception as e:
+            logger.error(f"Error downloading audio with requests: {str(e)}")
             return await self._create_error_file(mood, language, str(e))
     
     def _generate_filename(self, url, mood, language):

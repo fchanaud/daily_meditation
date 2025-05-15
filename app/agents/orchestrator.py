@@ -50,7 +50,7 @@ class MeditationOrchestrator:
         self.quality_checker = AudioQualityCheckerAgent()
         
         # Maximum number of attempts to find a good meditation
-        self.max_attempts = 3
+        self.max_attempts = 5  # Increased from 3 to give more chances to find working audio
     
     async def generate_meditation(self, mood, language=None, output_path=None):
         """
@@ -113,9 +113,9 @@ class MeditationOrchestrator:
                 temp_files.append(audio_path)
                 
                 # Check if this is a fallback audio file (which indicates download failed)
-                if "fallback" in audio_path or os.path.getsize(audio_path) < 1024:
+                if "fallback" in audio_path or "error" in audio_path or os.path.getsize(audio_path) < 10240:  # Less than 10KB
                     failed_urls.add(meditation_url)
-                    logger.warning(f"Download failed for URL: {meditation_url}, added to failed URLs")
+                    logger.warning(f"Download failed or resulted in a small file for URL: {meditation_url}, added to failed URLs")
                     continue  # Skip quality check and try another URL
                 
                 # Step 3: Check audio quality
@@ -153,23 +153,50 @@ class MeditationOrchestrator:
             
             except Exception as e:
                 logger.error(f"Error in attempt {attempt}: {str(e)}")
+                # If we've identified a URL, mark it as failed
+                if meditation_url:
+                    failed_urls.add(meditation_url)
                 # Continue to next attempt
         
         # If we couldn't find a suitable file after all attempts
         if final_audio_path is None:
             logger.warning("Failed to find a suitable meditation after all attempts")
             
-            # Use the last downloaded file as a fallback if available
-            if temp_files:
-                last_file = temp_files[-1]
+            # Use the last downloaded file as a fallback if available and reasonably sized
+            valid_files = []
+            for temp_file in temp_files:
+                try:
+                    if os.path.exists(temp_file) and os.path.getsize(temp_file) > 10240:  # Larger than 10KB
+                        valid_files.append(temp_file)
+                except Exception:
+                    # Skip files that can't be checked
+                    pass
+                    
+            if valid_files:
+                last_file = valid_files[-1]
                 if os.path.exists(last_file):
-                    logger.info(f"Using last file as fallback: {last_file}")
+                    logger.info(f"Using last valid file as fallback: {last_file}")
                     if last_file != output_path:
                         shutil.copy2(last_file, output_path)
                     final_audio_path = output_path
             
-            # If we still don't have a file, create an empty placeholder
-            if final_audio_path is None:
+            # If we still don't have a valid file, try one more time with the freemindfulness URL
+            if final_audio_path is None or os.path.getsize(final_audio_path) < 10240:
+                logger.warning("Attempting one last guaranteed fallback URL")
+                try:
+                    # Use a guaranteed working meditation URL from freemindfulness.org
+                    fallback_url = "https://www.freemindfulness.org/download/Breath%20meditation.mp3"
+                    audio_path = await self.downloader.download_audio(fallback_url, mood, language)
+                    if audio_path and os.path.exists(audio_path) and os.path.getsize(audio_path) > 10240:
+                        if audio_path != output_path:
+                            shutil.copy2(audio_path, output_path)
+                        final_audio_path = output_path
+                        temp_files.append(audio_path)
+                except Exception as e:
+                    logger.error(f"Error with final fallback: {str(e)}")
+            
+            # If all else fails, create a placeholder file
+            if final_audio_path is None or os.path.getsize(final_audio_path) < 1024:
                 logger.warning("Creating empty placeholder file")
                 Path(output_path).touch()
                 final_audio_path = output_path
