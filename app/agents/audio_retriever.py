@@ -86,43 +86,43 @@ class AudioRetrieverAgent:
         # These are unlikely to block with 403 errors as they're meant for free distribution
         self.reliable_meditation_urls = {
             "calm": [
-                "https://www.freemindfulness.org/download/Breath%20meditation.mp3",
-                "https://www.freemindfulness.org/download/Mountain%20Meditation.mp3",
-                "https://www.freemindfulness.org/download/Three%20Minute%20Breathing%20Space%20-%20standard%20practice%20%28verbally%20guided%29.mp3"
+                "https://www.mindfulnessexercises.com/wp-content/uploads/2022/03/Mindfulness-of-Breathing-10-Minute-Practice.mp3",
+                "https://mindfulness-exercises-free.s3.amazonaws.com/Mindfulness-of-the-Body-in-Body-Scan-Meditation.mp3",
+                "https://mindfulness-exercises-free.s3.amazonaws.com/Visualization-Meditation-10-minutes.mp3"
             ],
             "focused": [
-                "https://www.freemindfulness.org/download/3-Minute%20Breathing%20Space%20meditation.mp3",
-                "https://www.freemindfulness.org/download/UCLAMindful%20Awareness%20of%20the%20Breath.mp3",
-                "https://www.freemindfulness.org/download/UCLAMindful%20Awareness%20of%20Body%20Sensations.mp3"
+                "https://mindfulness-exercises-free.s3.amazonaws.com/Mindfulness-Meditation-for-Working-with-Difficulties.mp3",
+                "https://mindfulness-exercises-free.s3.amazonaws.com/10-Minute-Mindfulness-Meditation.mp3",
+                "https://mindfulness-exercises-free.s3.amazonaws.com/Mountain-Meditation-Script-10min.mp3"
             ],
             "relaxed": [
-                "https://www.freemindfulness.org/download/Body%20Scan.mp3",
-                "https://www.freemindfulness.org/download/Body%20Scan%20for%20Younger%20Children.mp3",
-                "https://www.freemindfulness.org/download/Finding%20Peace%20in%20a%20Frantic%20World%20-%20Chapter%205%20-%20Body%20Scan.mp3"
+                "https://mindfulness-exercises-free.s3.amazonaws.com/Progressive-Muscle-Relaxation-10min.mp3",
+                "https://www.mindfulnessexercises.com/wp-content/uploads/2022/03/Deep-Rest-Progressive-Muscle-Relaxation.mp3",
+                "https://www.mindfulnessexercises.com/wp-content/uploads/2022/03/Breath-Counting-Meditation.mp3"
             ],
             "energized": [
-                "https://www.freemindfulness.org/download/Mindful%20Movement.mp3",
-                "https://www.freemindfulness.org/download/UCLAMindful%20Walking%20Step%20by%20Step.mp3",
-                "https://www.freemindfulness.org/download/UCLAMindful%20Complete%20Meditation.mp3"
+                "https://mindfulness-exercises-free.s3.amazonaws.com/Mindful-Movement-10-min.mp3",
+                "https://mindfulness-exercises-free.s3.amazonaws.com/Morning-Meditation-10min.mp3",
+                "https://www.mindfulnessexercises.com/wp-content/uploads/2022/03/Energizing-Breath-Meditation-10-minutes.mp3"
             ],
             "grateful": [
-                "https://www.freemindfulness.org/download/Kindness%20Meditation.mp3",
-                "https://www.freemindfulness.org/download/UCLAMindful%20Loving%20Kindness%20Meditation.mp3",
-                "https://www.freemindfulness.org/download/Finding%20Peace%20in%20a%20Frantic%20World%20-%20Chapter%208%20-%20Mindfulness%20of%20the%20Body%20and%20Breath%20and%20Mindful%20Movement.mp3"
+                "https://mindfulness-exercises-free.s3.amazonaws.com/Gratitude-Meditation-10min.mp3",
+                "https://www.mindfulnessexercises.com/wp-content/uploads/2022/03/Loving-Kindness-Meditation-10-minutes.mp3",
+                "https://mindfulness-exercises-free.s3.amazonaws.com/Loving-Kindness-Meditation.mp3"
             ],
             "default": [
-                "https://www.freemindfulness.org/download/Breath%20meditation.mp3",
-                "https://www.freemindfulness.org/download/Body%20Scan.mp3",
-                "https://www.freemindfulness.org/download/Mindful%20Movement.mp3",
-                "https://www.freemindfulness.org/download/Mountain%20Meditation.mp3"
+                "https://www.mindfulnessexercises.com/wp-content/uploads/2022/03/Mindfulness-of-Breathing-10-Minute-Practice.mp3",
+                "https://mindfulness-exercises-free.s3.amazonaws.com/10-Minute-Mindfulness-Meditation.mp3", 
+                "https://mindfulness-exercises-free.s3.amazonaws.com/Body-Scan-Meditation-10min.mp3",
+                "https://mindfulness-exercises-free.s3.amazonaws.com/Loving-Kindness-Meditation.mp3"
             ]
         }
         
-        # Additional sources from public domain and Creative Commons sites
+        # Public domain and free to use meditation audio
         self.additional_sources = [
-            "https://publicdomainreview.org/collection/meditation-audio",
-            "https://freesound.org/search/?q=meditation&f=&s=score+desc&advanced=0&g=1",
-            "https://soundbible.com/search.php?q=meditation"
+            "https://www.mindfulnessexercises.com/free-mindfulness-exercises/",
+            "https://www.tarabrach.com/guided-meditations/",
+            "https://insighttimer.com/meditation-music/ambient-music"
         ]
     
     async def find_meditation(self, mood, language="english"):

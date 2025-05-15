@@ -337,10 +337,10 @@ class AudioDownloaderAgent:
         
         # List of pre-packaged fallback MP3s by mood
         default_fallbacks = {
-            "calm": "https://www.freemindfulness.org/download/Breath%20meditation.mp3",
-            "focused": "https://www.freemindfulness.org/download/3-Minute%20Breathing%20Space%20meditation.mp3",
-            "relaxed": "https://www.freemindfulness.org/download/Body%20Scan.mp3",
-            "default": "https://www.freemindfulness.org/download/Mountain%20Meditation.mp3"
+            "calm": "https://www.mindfulnessexercises.com/wp-content/uploads/2022/03/Mindfulness-of-Breathing-10-Minute-Practice.mp3",
+            "focused": "https://mindfulness-exercises-free.s3.amazonaws.com/10-Minute-Mindfulness-Meditation.mp3",
+            "relaxed": "https://mindfulness-exercises-free.s3.amazonaws.com/Progressive-Muscle-Relaxation-10min.mp3",
+            "default": "https://mindfulness-exercises-free.s3.amazonaws.com/Body-Scan-Meditation-10min.mp3"
         }
         
         # Try to download a fallback from a reliable source

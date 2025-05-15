@@ -180,12 +180,12 @@ class MeditationOrchestrator:
                         shutil.copy2(last_file, output_path)
                     final_audio_path = output_path
             
-            # If we still don't have a valid file, try one more time with the freemindfulness URL
+            # If we still don't have a valid file, try one more time with the new reliable URL
             if final_audio_path is None or os.path.getsize(final_audio_path) < 10240:
                 logger.warning("Attempting one last guaranteed fallback URL")
                 try:
-                    # Use a guaranteed working meditation URL from freemindfulness.org
-                    fallback_url = "https://www.freemindfulness.org/download/Breath%20meditation.mp3"
+                    # Use a guaranteed working meditation URL from mindfulnessexercises.com
+                    fallback_url = "https://mindfulness-exercises-free.s3.amazonaws.com/Body-Scan-Meditation-10min.mp3"
                     audio_path = await self.downloader.download_audio(fallback_url, mood, language)
                     if audio_path and os.path.exists(audio_path) and os.path.getsize(audio_path) > 10240:
                         if audio_path != output_path:
