@@ -12,6 +12,11 @@ from typing import List, Dict, Optional, Any
 # Now we can use the real orchestrator
 from app.agents.orchestrator import MeditationOrchestrator
 import time
+import logging
+
+# Setup logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 # Setup templates
 templates_dir = Path(__file__).parent.parent / "templates"
@@ -41,6 +46,17 @@ app.add_middleware(
 
 # Initialize the orchestrator - we'll reuse this instance
 meditation_orchestrator = MeditationOrchestrator()
+
+# Setup error handling for missing environment variables
+@app.on_event("startup")
+async def startup_db_client():
+    from app.utils.db import init_supabase
+    # Try to initialize Supabase but continue even if it fails
+    try:
+        init_supabase()
+    except Exception as e:
+        logger.error(f"Failed to initialize database: {e}")
+        logger.info("Application will continue without database functionality")
 
 class MeditationRequest(BaseModel):
     mood: str
@@ -118,7 +134,6 @@ async def generate_meditation(request: MeditationRequest, user_id: str = Depends
         return response
     except Exception as e:
         # For debugging purposes, log the error
-        import logging
         logging.error(f"Error generating meditation: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to generate meditation: {str(e)}")
 
@@ -153,7 +168,6 @@ async def submit_feedback(feedback: FeedbackResponse, user_id: str = Depends(get
             }
     except Exception as e:
         # For debugging purposes, log the error
-        import logging
         logging.error(f"Error saving feedback: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to save feedback: {str(e)}")
 

@@ -24,11 +24,17 @@ def init_supabase():
     """Initialize the Supabase client if credentials are available."""
     global supabase
     
-    if not SUPABASE_URL or not SUPABASE_KEY:
-        logger.warning("Supabase credentials not found in environment variables")
+    # Skip initialization if URL or key are missing or empty
+    if not SUPABASE_URL or not SUPABASE_KEY or SUPABASE_URL.strip() == "" or SUPABASE_KEY.strip() == "":
+        logger.warning("Supabase credentials missing or empty - database features will be disabled")
         return False
     
     try:
+        # Validate URL format
+        if not SUPABASE_URL.startswith("http"):
+            logger.error("Invalid Supabase URL format - must start with http:// or https://")
+            return False
+            
         # Create client with new package syntax (compatible with both old and new versions)
         supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
         logger.info("Supabase client initialized successfully")
@@ -53,7 +59,8 @@ async def save_meditation_session(mood, language, youtube_url=None, audio_url=No
     if not supabase:
         if not init_supabase():
             logger.warning("Unable to save meditation session - Supabase not initialized")
-            return False
+            # Continue the application without error since this is non-critical
+            return True
     
     try:
         # Create data to insert

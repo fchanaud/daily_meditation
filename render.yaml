@@ -2,19 +2,37 @@ services:
   - type: web
     name: daily-meditation
     env: python
-    buildCommand: chmod +x ./deploy_setup.sh && ./deploy_setup.sh && pip install -r requirements.txt
-    startCommand: uvicorn app.api.app:app --host 0.0.0.0 --port $PORT
-    envVars:
-      - key: OPENAI_API_KEY
-        sync: false
-      - key: DEBUG_MODE
-        value: false
-      - key: TTS_VOICE_MODEL
-        value: en_US-lessac-medium
-      - key: SUPABASE_URL
-        sync: false
-      - key: SUPABASE_KEY
-        sync: false
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn -k uvicorn.workers.UvicornWorker -b 0.0.0.0:$PORT --workers 1 --threads 8 app.api.app:app
+    repo: https://github.com/fchanaud/daily_meditation.git
+    branch: main
     healthCheckPath: /
     autoDeploy: true
-    runtime: python3 
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.11
+      - key: PORT
+        fromService:
+          type: web
+          name: daily-meditation
+          envVarKey: PORT
+      - key: PYTHON_PATH
+        value: ${PYTHON_PATH}:.:/app
+      - key: SUPABASE_URL
+        value: ""
+        sync: false
+      - key: SUPABASE_KEY
+        value: ""
+        sync: false
+      - key: APPLE_TEAM_ID
+        value: ""
+        sync: false
+      - key: APPLE_KEY_ID
+        value: ""
+        sync: false
+      - key: PUSHOVER_USER_KEY
+        value: ""
+        sync: false
+      - key: PUSHOVER_API_TOKEN
+        value: ""
+        sync: false 

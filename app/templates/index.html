@@ -92,14 +92,11 @@
                     <h3 id="youtube-title" class="mb-0">Your Meditation Video</h3>
                 </div>
                 <div class="card-body text-center">
-                    <p class="mb-3">We've found a meditation video that matches your mood.</p>
-                    
                     <!-- YouTube Embed Player -->
                     <div id="youtube-embed" class="ratio ratio-16x9 mb-3">
                         <!-- Player will be inserted here via JavaScript -->
                     </div>
                     
-                    <p class="small text-muted">Take a few moments to find a comfortable position before starting the meditation.</p>
                     <button id="show-feedback-btn" class="btn btn-primary mt-2">
                         I've finished watching - Give Feedback
                     </button>
@@ -216,12 +213,22 @@
             playerVars: {
                 'playsinline': 1,
                 'rel': 0,
-                'modestbranding': 1
+                'modestbranding': 1,
+                'autoplay': 1
             },
             events: {
-                'onStateChange': onPlayerStateChange
+                'onStateChange': onPlayerStateChange,
+                'onReady': onPlayerReady
             }
         });
+    }
+    
+    // Function to handle player ready event
+    function onPlayerReady(event) {
+        // Automatically play the video after 3 seconds
+        setTimeout(() => {
+            event.target.playVideo();
+        }, 3000);
     }
     
     // Function to handle player state change
@@ -383,12 +390,8 @@
                     const youtubeTitle = document.getElementById('youtube-title');
                     const showFeedbackBtn = document.getElementById('show-feedback-btn');
                     
-                    // Set the title if available
-                    if (data.source_info && data.source_info.title) {
-                        youtubeTitle.textContent = data.source_info.title;
-                    } else {
-                        youtubeTitle.textContent = 'Your Meditation Video';
-                    }
+                    // Set the title
+                    youtubeTitle.textContent = 'Your Meditation Video';
                     
                     // Extract YouTube video ID and create player
                     const videoId = getYouTubeVideoId(data.youtube_url);

@@ -39,6 +39,34 @@ The application is built using:
 - HTML5 audio player for meditation playback
 - BeautifulSoup for web scraping
 
+## Python Version Requirements
+
+**Important: This application requires Python 3.11.x**
+
+The application is not compatible with Python 3.12 or newer due to dependency constraints with FastAPI, Pydantic, and other libraries. We recommend using Python 3.11.7 for optimal compatibility.
+
+To set up a Python 3.11 environment:
+
+```bash
+# If you have pyenv installed
+pyenv install 3.11.7
+pyenv local 3.11.7
+
+# Create virtual environment
+python -m venv venv
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+If you're using Python 3.12+ and encounter the following error:
+```
+TypeError: ForwardRef._evaluate() missing 1 required keyword-only argument: 'recursive_guard'
+```
+
+This is due to incompatibility between the installed FastAPI/Pydantic versions and Python 3.12+. Please switch to Python 3.11.x.
+
 ## Running the App
 
 ```bash

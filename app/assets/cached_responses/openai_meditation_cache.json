@@ -2,5 +2,13 @@
   "calm_english": {
     "youtube_url": "https://www.youtube.com/watch?v=abcdefg",
     "title": "Guided Meditation for Calmness and Relaxation (8-15 minutes)"
+  },
+  "happy_english": {
+    "youtube_url": "https://www.youtube.com/watch?v=abcdefghijk",
+    "title": "Guided Meditation for Happiness | 10 Minutes"
+  },
+  "creative_english": {
+    "youtube_url": "https://www.youtube.com/watch?v=examplevideo",
+    "title": "Creative Mood Meditation - 10 Minutes Guided Meditation"
   }
 }
