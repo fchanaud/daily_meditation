@@ -9,6 +9,7 @@ import tempfile
 from pathlib import Path
 # Now we can use the real orchestrator
 from app.agents.orchestrator import MeditationOrchestrator
+import time
 
 # Setup templates
 templates_dir = Path(__file__).parent.parent / "templates"
@@ -63,9 +64,9 @@ async def generate_meditation(request: MeditationRequest):
     1. Search Pixabay and Archive.org for suitable meditation audio matching the mood
     2. Download the audio file (typically around 10 minutes in length)
     3. Check the audio quality to ensure it meets standards
-    4. Return the best matching meditation
+    4. Return a URL to the best matching meditation
     
-    Returns an MP3 audio file of the meditation.
+    Returns JSON with audio URL and metadata.
     """
     try:
         orchestrator = MeditationOrchestrator(language=request.language)
@@ -84,21 +85,32 @@ async def generate_meditation(request: MeditationRequest):
         # Clean up resources
         await orchestrator.close()
         
-        # Read the meditation file
-        with open(meditation_path, "rb") as f:
-            audio_data = f.read()
+        # Move the file to a static location for serving
+        static_dir = Path(__file__).parent.parent / "static" / "meditations"
+        static_dir.mkdir(exist_ok=True)
+        
+        # Create a unique filename based on mood, language and timestamp
+        timestamp = int(time.time())
+        filename = f"meditation_{request.mood}_{request.language}_{timestamp}.mp3"
+        static_path = static_dir / filename
+        
+        # Move the file
+        import shutil
+        shutil.copy(meditation_path, static_path)
         
         # Clean up the temporary file
         os.unlink(meditation_path)
         
-        # Return the audio file
-        return Response(
-            content=audio_data,
-            media_type="audio/mpeg",
-            headers={
-                "Content-Disposition": f'attachment; filename="meditation_{request.mood}_{request.language}.mp3"'
-            }
-        )
+        # Return the audio URL and metadata
+        audio_url = f"/static/meditations/{filename}"
+        return {
+            "status": "success",
+            "audio_url": audio_url,
+            "mood": request.mood,
+            "language": request.language,
+            "message": f"Your {request.mood} meditation is ready to play.",
+            "note": "Find a quiet place, sit comfortably, and breathe deeply as you listen."
+        }
     except Exception as e:
         # For debugging purposes, log the error
         import logging

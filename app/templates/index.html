@@ -61,6 +61,14 @@
         </div>
     </form>
     
+    <!-- Progress indicator -->
+    <div id="progress-container" class="mt-4" style="display: none;">
+        <div class="progress">
+            <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%"></div>
+        </div>
+        <p id="progress-stage" class="text-center mt-2">Searching for the perfect meditation...</p>
+    </div>
+    
     <!-- Response container -->
     <div id="response-container" class="mt-4 text-center" style="display: none;">
         <div class="alert alert-info">
@@ -68,6 +76,15 @@
             <p id="response-message"></p>
             <hr>
             <p class="mb-0" id="response-note"></p>
+        </div>
+        
+        <!-- Audio player -->
+        <div id="audio-player-container" class="mt-4" style="display: none;">
+            <audio id="meditation-audio" controls autoplay class="w-100">
+                <source id="meditation-source" src="" type="audio/mpeg">
+                Your browser does not support the audio element.
+            </audio>
+            <p class="text-muted mt-2">If audio doesn't play automatically, click the play button above.</p>
         </div>
     </div>
 </div>
@@ -80,9 +97,15 @@
         const moodCards = document.querySelectorAll('.mood-card');
         const moodRadios = document.querySelectorAll('.mood-radio');
         const submitButton = document.getElementById('find-meditation');
+        const progressContainer = document.getElementById('progress-container');
+        const progressBar = document.getElementById('progress-bar');
+        const progressStage = document.getElementById('progress-stage');
         const responseContainer = document.getElementById('response-container');
         const responseMessage = document.getElementById('response-message');
         const responseNote = document.getElementById('response-note');
+        const audioPlayerContainer = document.getElementById('audio-player-container');
+        const meditationAudio = document.getElementById('meditation-audio');
+        const meditationSource = document.getElementById('meditation-source');
         
         // Add click event to mood cards
         moodCards.forEach(card => {
@@ -115,8 +138,41 @@
             submitButton.disabled = true;
             submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
             
+            // Reset progress bar
+            progressBar.style.width = '0%';
+            progressStage.textContent = 'Searching for the perfect meditation...';
+            progressContainer.style.display = 'block';
+            
             // Hide any previous response
             responseContainer.style.display = 'none';
+            audioPlayerContainer.style.display = 'none';
+            
+            // Simulate progress updates (since we can't get real-time updates from the server)
+            let progress = 0;
+            const progressStages = [
+                'Searching for meditations that match your mood...',
+                'Finding high-quality audio sources...',
+                'Processing your meditation...',
+                'Almost ready...'
+            ];
+            
+            const progressInterval = setInterval(() => {
+                if (progress < 90) {
+                    progress += Math.random() * 10;
+                    progressBar.style.width = `${Math.min(progress, 90)}%`;
+                    
+                    // Update progress stage text
+                    if (progress < 25) {
+                        progressStage.textContent = progressStages[0];
+                    } else if (progress < 50) {
+                        progressStage.textContent = progressStages[1];
+                    } else if (progress < 75) {
+                        progressStage.textContent = progressStages[2];
+                    } else {
+                        progressStage.textContent = progressStages[3];
+                    }
+                }
+            }, 1000);
             
             // Create fetch request
             fetch('/generate-meditation', {
@@ -131,16 +187,29 @@
             })
             .then(response => {
                 if (response.ok) {
-                    // Parse as JSON (different from original which used blob)
                     return response.json();
                 }
                 throw new Error('Network response was not ok');
             })
             .then(data => {
+                // Clear the progress interval
+                clearInterval(progressInterval);
+                
+                // Set progress to 100%
+                progressBar.style.width = '100%';
+                progressStage.textContent = 'Your meditation is ready!';
+                
                 // Display the response message
                 responseMessage.textContent = data.message || 'Meditation selection successful';
                 if (data.note) {
                     responseNote.textContent = data.note;
+                }
+                
+                // Set up audio player with the meditation URL
+                if (data.audio_url) {
+                    meditationSource.src = data.audio_url;
+                    meditationAudio.load(); // Reload the audio element
+                    audioPlayerContainer.style.display = 'block';
                 }
                 
                 // Show the response container
@@ -150,11 +219,24 @@
                 submitButton.disabled = false;
                 submitButton.innerHTML = 'Find My Meditation';
                 
+                // Hide progress bar after a delay
+                setTimeout(() => {
+                    progressContainer.style.display = 'none';
+                }, 2000);
+                
                 // Scroll to the response
                 responseContainer.scrollIntoView({ behavior: 'smooth' });
             })
             .catch(error => {
                 console.error('Error:', error);
+                
+                // Clear the progress interval
+                clearInterval(progressInterval);
+                
+                // Hide progress container
+                progressContainer.style.display = 'none';
+                
+                // Show error message
                 alert('Failed to generate meditation. Please try again.');
                 
                 // Reset the button

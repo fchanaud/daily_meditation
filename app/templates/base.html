@@ -6,11 +6,11 @@
     <title>Daily Meditation</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="/static/style.css">
     <style>
         body {
             background-color: #f8f9fa;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #333;
         }
         .mood-container {
             max-width: 800px;
@@ -20,35 +20,98 @@
             border-radius: 10px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
-        .mood-item {
-            padding: 1rem;
-            margin: 0.5rem 0;
-            border-radius: 8px;
-            background-color: #f0f7ff;
-            cursor: pointer;
-            transition: all 0.2s ease;
+        .mood-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
         }
-        .mood-item:hover {
+        .mood-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1.2rem 0.8rem;
+            border-radius: 10px;
+            background-color: #f0f7ff;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+        .mood-card:hover {
             background-color: #e2f0fd;
             transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
         }
-        .mood-item.selected {
+        .mood-card.selected {
             background-color: #cce5ff;
             border: 2px solid #007bff;
+            transform: translateY(-3px);
         }
-        .mood-title {
-            color: #1a365d;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
+        .mood-icon {
+            font-size: 2rem;
+            margin-bottom: 0.8rem;
+            color: #1a73e8;
+            height: 50px;
+            width: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #e0f2ff;
+            border-radius: 50%;
         }
         .btn-primary {
             background-color: #1a73e8;
             border-color: #1a73e8;
+            padding: 0.5rem 1.5rem;
+            transition: all 0.2s ease;
+        }
+        .btn-primary:hover {
+            background-color: #0d62d6;
+            border-color: #0d62d6;
+            transform: translateY(-2px);
         }
         .header {
             text-align: center;
             padding: 2rem 0 1rem;
             color: #2c3e50;
+        }
+        .progress {
+            height: 1rem;
+            border-radius: 0.5rem;
+            background-color: #e9ecef;
+        }
+        .progress-bar {
+            background-color: #1a73e8;
+        }
+        #audio-player-container {
+            padding: 1rem;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        }
+        audio {
+            border-radius: 30px;
+        }
+        #progress-stage {
+            color: #6c757d;
+            font-style: italic;
+            font-size: 0.9rem;
+        }
+        .language-selection {
+            background-color: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1.5rem;
+        }
+        @media (max-width: 576px) {
+            .mood-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .mood-container {
+                padding: 1.5rem;
+                margin: 1rem;
+            }
         }
     </style>
     {% block extra_head %}{% endblock %}
@@ -61,6 +124,10 @@
         </div>
         
         {% block content %}{% endblock %}
+        
+        <footer class="mt-5 mb-3 text-center text-muted">
+            <small>Daily Meditation App - Powered by Pixabay and Archive.org audio</small>
+        </footer>
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

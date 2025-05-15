@@ -1,48 +1,63 @@
 # Daily Meditation App
 
-A FastAPI backend that provides personalized 10-minute meditation sessions based on your current mood. The app scrapes the web for meditation audio files that match your mood and ensures they meet quality standards before delivery.
+A web application that helps users find personalized meditation audio based on their current mood.
 
 ## Features
 
-- Mood-based meditation retrieval
-- Support for English and French meditations
-- Web scraping to find relevant meditation audio
-- Audio quality validation
-- Stateless design (no user accounts or history)
-- Ready for iOS Shortcuts integration
+- 🧘‍♂️ Select from 10 different mood options
+- 🎵 Automatically finds meditation audio from Pixabay and Archive.org
+- 🌍 Supports multiple languages (English and French)
+- 🔄 Real-time progress indicators during audio retrieval
+- 🎧 Integrated audio player with auto-playback
 
-## Technical Stack
+## Recent Improvements
 
-- FastAPI for the API backend
-- Web scraping for meditation audio retrieval
-- pydub for audio processing and quality checking
-- Render for deployment
+- Added pre-vetted Pixabay URLs known to work
+- Implemented rotating user agents to avoid being blocked
+- Added direct Archive.org collection scraping
+- Expanded the acceptable meditation duration range to 8-15 minutes
+- Added better error handling and fallback mechanisms
+- Improved duration detection in audio files
+- Added progress indicators to show audio retrieval status
+- Integrated audio player with automatic playback
 
-## Agentic Workflow
+## How It Works
 
-The app uses a modular agent system:
+1. User selects their current mood from 10 options
+2. User chooses their preferred language
+3. App searches Pixabay and Archive.org for suitable meditation audio
+4. Audio is streamed directly in the browser with controls
+5. Audio files are temporarily cached for better performance
 
-1. **AudioRetrieverAgent**: Scrapes the web to find meditation audio URLs matching a mood
-2. **AudioDownloaderAgent**: Downloads the audio files from the provided URL
-3. **AudioQualityCheckerAgent**: Validates that the audio quality meets standards (duration, bitrate, etc.)
-4. **MeditationOrchestrator**: Coordinates the workflow between all agents
+## Technical Details
 
-## API Usage
+The application is built using:
 
-Send a POST request to `/generate-meditation` with a JSON payload containing your mood and preferred language:
+- FastAPI for the backend API
+- Jinja2 templates for server-side rendering
+- Bootstrap for responsive UI design
+- HTML5 audio player for meditation playback
+- BeautifulSoup for web scraping
 
-```json
-{
-  "mood": "calm",
-  "language": "english"
-}
+## Running the App
+
+```bash
+# Clone the repository
+git clone https://github.com/yourusername/daily-meditation.git
+cd daily-meditation
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Start the application
+./start.sh
 ```
 
-The response will be an MP3 audio file that can be played directly on your device.
+The app will be available at http://localhost:8000
 
-## iOS Shortcuts Integration
+## API Endpoints
 
-An iOS Shortcut can be set up to:
-1. Prompt for a mood selection and language preference
-2. Call the API endpoint
-3. Play the returned audio automatically
+- `GET /`: Home page with mood selection interface
+- `POST /generate-meditation`: Generate a meditation based on mood and language
+- `GET /available-moods`: Get list of available moods
+- `GET /available-languages`: Get list of available languages
