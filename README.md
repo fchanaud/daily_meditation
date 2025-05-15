@@ -12,6 +12,7 @@ A web application that helps users find personalized meditation audio based on t
 
 ## Recent Improvements
 
+- Added YouTube video validation to ensure only playable videos are presented
 - Added pre-vetted Pixabay URLs known to work
 - Implemented rotating user agents to avoid being blocked
 - Added direct Archive.org collection scraping

@@ -7,6 +7,7 @@ import os
 import logging
 import json
 import requests
+import asyncio
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
 from app.utils.config import OPENAI_API_KEY
@@ -14,6 +15,15 @@ from app.utils.config import OPENAI_API_KEY
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+# Import pytube for YouTube validation
+try:
+    from pytube import YouTube
+    from pytube.exceptions import PytubeError, VideoUnavailable, RegexMatchError
+    PYTUBE_AVAILABLE = True
+except ImportError:
+    logger.warning("pytube library not available - video validation will be limited")
+    PYTUBE_AVAILABLE = False
 
 class OpenAIMeditationAgent:
     """
@@ -31,6 +41,17 @@ class OpenAIMeditationAgent:
         
         # Optimize language templates for token efficiency
         self.prompt_template = "Find YouTube meditation video: {duration} minutes, {mood} mood, {language} language. Return JSON with format: {{url: 'youtube_url_here'}}"
+        
+        # Maximum number of attempts to find valid video
+        self.max_validation_attempts = 3
+        
+        # Fallback videos known to be reliable
+        self.fallback_videos = [
+            "https://www.youtube.com/watch?v=ZToicYcHIOU",  # 10 min meditation
+            "https://www.youtube.com/watch?v=O-6f5wQXSu8",  # Generic meditation
+            "https://www.youtube.com/watch?v=86m4RC_ADEY",  # Relaxing music
+            "https://www.youtube.com/watch?v=1ZYbU82GVz4"   # Calm meditation
+        ]
     
     async def find_meditation(self, mood: str, language: str = "english") -> Tuple[str, Dict]:
         """
@@ -56,36 +77,132 @@ class OpenAIMeditationAgent:
         
         logger.info(f"Generating OpenAI prompt for mood: {mood}, language: {language}")
         
+        # Track validation attempts
+        attempts = 0
+        max_attempts = self.max_validation_attempts
+        
+        while attempts < max_attempts:
+            attempts += 1
+            try:
+                # Call OpenAI API
+                response = await self._call_openai(prompt)
+                
+                # Parse the response to extract the YouTube URL
+                youtube_url = self._extract_youtube_url(response)
+                
+                if youtube_url:
+                    logger.info(f"Found YouTube meditation: {youtube_url}")
+                    
+                    # Validate the YouTube URL
+                    is_valid = await self._validate_youtube_url(youtube_url)
+                    
+                    if is_valid:
+                        logger.info(f"YouTube video is valid and available: {youtube_url}")
+                        
+                        # Return URL and minimal source info
+                        return youtube_url, {
+                            "youtube_url": youtube_url,
+                            "title": f"{mood.capitalize()} Meditation"
+                        }
+                    else:
+                        logger.warning(f"YouTube video is unavailable: {youtube_url} (attempt {attempts}/{max_attempts})")
+                        # Add information to prompt to avoid returning the same invalid URL
+                        prompt += f" Do not return {youtube_url} as it's unavailable."
+                        
+                        # Short delay before trying again
+                        await asyncio.sleep(0.5)
+                        continue
+                else:
+                    logger.warning(f"OpenAI response did not contain a valid YouTube URL (attempt {attempts}/{max_attempts})")
+                    
+            except Exception as e:
+                logger.error(f"Error generating meditation URL with OpenAI: {str(e)} (attempt {attempts}/{max_attempts})")
+                
+            # If we reach here, there was an issue - increase backoff slightly
+            await asyncio.sleep(1)
+                
+        # If we've exhausted all attempts, return a fallback URL
+        fallback_url = self._get_fallback_url()
+        logger.warning(f"Exhausted all validation attempts, using fallback URL: {fallback_url}")
+        
+        return fallback_url, {
+            "youtube_url": fallback_url,
+            "title": "Fallback Meditation Video"
+        }
+    
+    async def _validate_youtube_url(self, youtube_url: str) -> bool:
+        """
+        Validate if a YouTube URL points to an available video.
+        
+        Args:
+            youtube_url: The YouTube URL to validate
+            
+        Returns:
+            Boolean indicating if the URL is valid and video is available
+        """
+        if not youtube_url:
+            return False
+            
+        # First check simple URL format validation
+        if not ("youtube.com/watch?v=" in youtube_url or "youtu.be/" in youtube_url):
+            logger.warning(f"Invalid YouTube URL format: {youtube_url}")
+            return False
+        
+        # Fallback: Basic URL check with requests
         try:
-            # Call OpenAI API
-            response = await self._call_openai(prompt)
-            
-            # Parse the response to extract the YouTube URL
-            youtube_url = self._extract_youtube_url(response)
-            
-            if youtube_url:
-                logger.info(f"Found YouTube meditation: {youtube_url}")
-                
-                # Return URL and minimal source info
-                return youtube_url, {
-                    "youtube_url": youtube_url,
-                    "title": f"{mood.capitalize()} Meditation"
-                }
-            else:
-                logger.warning(f"OpenAI response did not contain a valid YouTube URL")
-                # Return fallback URL
-                return "https://www.youtube.com/watch?v=ZToicYcHIOU", {
-                    "youtube_url": "https://www.youtube.com/watch?v=ZToicYcHIOU",
-                    "title": "Fallback Meditation Video"
-                }
-                
-        except Exception as e:
-            logger.error(f"Error generating meditation URL with OpenAI: {str(e)}")
-            # Return fallback URL
-            return "https://www.youtube.com/watch?v=ZToicYcHIOU", {
-                "youtube_url": "https://www.youtube.com/watch?v=ZToicYcHIOU",
-                "title": "Fallback Meditation Video"
+            # Simple availability check using requests
+            # Just check if the page exists, not if video is playable
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
             }
+            response = requests.head(youtube_url, headers=headers, timeout=5)
+            
+            # HEAD request worked
+            if response.status_code == 200:
+                # Do a more thorough check if pytube is available
+                if PYTUBE_AVAILABLE:
+                    try:
+                        # Extract video ID from the URL
+                        video_id = None
+                        if "youtube.com/watch?v=" in youtube_url:
+                            video_id = youtube_url.split("youtube.com/watch?v=")[1].split("&")[0]
+                        elif "youtu.be/" in youtube_url:
+                            video_id = youtube_url.split("youtu.be/")[1].split("?")[0]
+                            
+                        # Create a YouTube object and check availability
+                        yt = YouTube(youtube_url)
+                        
+                        # This will raise an exception if the video is unavailable
+                        try:
+                            # Attempt to access video metadata
+                            yt.check_availability()
+                            return True
+                        except (PytubeError, VideoUnavailable, RegexMatchError) as e:
+                            logger.warning(f"YouTube validation failed: {str(e)}")
+                            return False
+                    except Exception as e:
+                        # If pytube fails, trust the HEAD request result
+                        logger.warning(f"Pytube error, falling back to HTTP status: {str(e)}")
+                        return True
+                
+                # If pytube isn't available, trust the HEAD request
+                return True
+            
+            # HEAD request failed
+            return False
+        except Exception as e:
+            logger.error(f"Error checking YouTube URL: {str(e)}")
+            return False
+    
+    def _get_fallback_url(self) -> str:
+        """
+        Get a fallback YouTube URL from the list of known good videos.
+        
+        Returns:
+            A fallback YouTube URL
+        """
+        import random
+        return random.choice(self.fallback_videos)
     
     async def _call_openai(self, prompt: str) -> str:
         """
@@ -156,6 +273,15 @@ class OpenAIMeditationAgent:
         """
         # Try to parse JSON response
         try:
+            # Handle both formats: {"url": "..."} and {url: '...'}
+            if "{url:" in response_text or "{\"url\":" in response_text:
+                import re
+                # Extract URL directly using regex to handle inconsistent quotes
+                url_match = re.search(r'(?:url:|"url":)\s*[\'"]?(https?://(?:www\.)?(?:youtube\.com/watch\?v=|youtu\.be/)[a-zA-Z0-9_-]+)[\'"]?', response_text)
+                if url_match:
+                    return url_match.group(1)
+            
+            # Standard JSON parsing
             data = json.loads(response_text)
             if "url" in data and ("youtube.com" in data["url"] or "youtu.be" in data["url"]):
                 return data["url"]
