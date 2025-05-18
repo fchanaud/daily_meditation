@@ -227,4 +227,12 @@ async def ping():
     """
     Simple endpoint for uptime monitoring to prevent the app from sleeping on render free plan.
     """
-    return {"status": "alive", "timestamp": datetime.now().isoformat()} 
+    return {"status": "alive", "timestamp": datetime.now().isoformat()}
+
+@app.api_route("/ping", methods=["HEAD"])
+async def ping_head():
+    """
+    HEAD endpoint for uptime monitoring services like Uptime Robot.
+    Returns empty response with 200 status code.
+    """
+    return Response(status_code=200) 

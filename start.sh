@@ -4,23 +4,42 @@
 # IMPORTANT: This application requires Python 3.11.x
 # It is NOT compatible with Python 3.12 or newer due to dependency constraints
 
+# Setup variables
+PORT=${PORT:-8000}
+HOST=${HOST:-0.0.0.0}
+DEBUG=${DEBUG:-true}
+
 # Check Python version
-PYTHON_VERSION=$(python --version 2>&1)
-if [[ $PYTHON_VERSION != *"3.11"* ]]; then
-  echo "Warning: This application requires Python 3.11.x"
-  echo "Current version: $PYTHON_VERSION"
-  echo "Please create and activate a Python 3.11 virtual environment before running this script."
-  
-  # Try to find Python 3.11
-  if command -v python3.11 &>/dev/null; then
-    echo "Found Python 3.11, using it instead."
-    PYTHON_CMD="python3.11"
-  else
+echo "Checking Python version..."
+PYTHON_VERSION=$(python3 --version 2>&1)
+echo "Current version: $PYTHON_VERSION"
+
+if [[ "$PYTHON_VERSION" != *"Python 3"* ]]; then
+    echo "Warning: This application requires Python 3.11.x"
+    echo "Current version: $PYTHON_VERSION"
+    echo "Please create and activate a Python 3.11 virtual environment before running this script."
     echo "Attempting to continue, but may encounter errors."
-    PYTHON_CMD="python"
-  fi
+elif [[ "$PYTHON_VERSION" != *"Python 3.11"* ]]; then
+    echo "Warning: This application requires Python 3.11.x"
+    echo "Current version: $PYTHON_VERSION"
+    echo "For best results, please use Python 3.11.x"
+    echo "Attempting to continue, but may encounter errors."
 else
-  PYTHON_CMD="python"
+    echo "Python version is compatible."
+fi
+
+# Set up environment if needed
+if [ ! -d "venv" ]; then
+    echo "Virtual environment not found, creating one..."
+    python3 -m venv venv
+    source venv/bin/activate
+    pip install -r requirements.txt
+fi
+
+# Activate virtual environment if not already active
+if [[ -z "$VIRTUAL_ENV" ]]; then
+    echo "Activating virtual environment..."
+    source venv/bin/activate
 fi
 
 # Create directories if they don't exist
@@ -37,7 +56,7 @@ export PYTHONPATH=$PYTHONPATH:$(pwd)
 if [[ -z "${PORT}" ]]; then
   # Development mode - use uvicorn with reload
   echo "Starting development server..."
-  $PYTHON_CMD main.py
+  python3 -m app.api.app
 else
   # Production mode - use gunicorn
   echo "Starting production server on port ${PORT}..."
