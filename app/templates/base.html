@@ -125,13 +125,104 @@
             background-color: #28a745;
             border-color: #28a745;
         }
+        
+        /* Responsive styles for iPhone and smaller screens */
         @media (max-width: 576px) {
+            body {
+                font-size: 0.95rem;
+            }
+            .container {
+                padding-left: 10px;
+                padding-right: 10px;
+            }
+            .header {
+                padding: 1rem 0;
+            }
+            .header h1 {
+                font-size: 1.8rem;
+            }
+            .lead {
+                font-size: 1.1rem;
+            }
             .mood-grid {
                 grid-template-columns: repeat(2, 1fr);
+                gap: 0.5rem;
             }
             .mood-container {
-                padding: 1.5rem;
-                margin: 1rem;
+                padding: 1rem;
+                margin: 0.5rem auto;
+            }
+            .mood-card {
+                padding: 0.8rem 0.5rem;
+            }
+            .mood-icon {
+                font-size: 1.5rem;
+                height: 40px;
+                width: 40px;
+            }
+            .mood-card .card-title {
+                font-size: 0.9rem;
+            }
+            .btn {
+                width: 100%;
+                margin-bottom: 0.5rem;
+                padding: 0.5rem;
+            }
+            .card-header {
+                padding: 0.75rem;
+            }
+            .card-header h3 {
+                font-size: 1.2rem;
+            }
+            .card-body {
+                padding: 0.75rem;
+            }
+            .form-label {
+                font-size: 0.9rem;
+            }
+            .rating-star {
+                font-size: 1.3rem;
+            }
+            .youtube-title {
+                font-size: 1.1rem;
+            }
+            .ratio {
+                width: 100%;
+                height: auto;
+            }
+        }
+        
+        /* iPhone 6s and similar sizes */
+        @media (max-width: 375px) {
+            .container {
+                padding-left: 5px;
+                padding-right: 5px;
+            }
+            .header h1 {
+                font-size: 1.6rem;
+            }
+            .lead {
+                font-size: 1rem;
+            }
+            .mood-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.4rem;
+            }
+            .mood-card {
+                padding: 0.6rem 0.4rem;
+            }
+            .mood-icon {
+                font-size: 1.3rem;
+                height: 35px;
+                width: 35px;
+                margin-bottom: 0.3rem;
+            }
+            .mood-card .card-title {
+                font-size: 0.8rem;
+                margin-top: 0.1rem !important;
+            }
+            .card-header h3 {
+                font-size: 1.1rem;
             }
         }
     </style>
@@ -139,10 +230,6 @@
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>Daily Meditation</h1>
-            <p class="lead">Find your perfect 10-minute meditation</p>
-        </div>
         
         {% block content %}{% endblock %}
         

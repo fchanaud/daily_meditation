@@ -10,7 +10,7 @@ import asyncio
 
 from app.agents.openai_meditation_agent import OpenAIMeditationAgent
 from app.agents.feedback_collector import FeedbackCollectorAgent
-from app.utils.db import save_meditation_session
+from app.utils.db import save_meditation_session, get_user_watched_videos
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -39,18 +39,18 @@ class MeditationOrchestrator:
         # Track the current meditation metadata
         self.current_meditation = None
     
-    async def generate_meditation(self, mood, language=None):
+    async def generate_meditation(self, mood, language=None, user_id=None):
         """
         Generate a meditation based on the provided mood.
         
         This method uses OpenAI to find a YouTube meditation video:
         1. Ask OpenAI for a YouTube URL based on mood and language
         2. Format the response for embedding in the web app
-        3. Save the meditation session to the database
         
         Args:
             mood: The mood to base the meditation on
             language: Language preference (defaults to the instance language)
+            user_id: Optional user identifier to avoid showing previously watched videos
             
         Returns:
             Dictionary containing YouTube URL and metadata
@@ -60,8 +60,18 @@ class MeditationOrchestrator:
         logger.info(f"Finding meditation for mood: {mood}, language: {language}")
         
         try:
+            # Get list of previously watched videos for this user if user_id is provided
+            watched_videos = []
+            if user_id:
+                watched_videos = await get_user_watched_videos(user_id)
+                logger.info(f"Found {len(watched_videos)} previously watched videos for user")
+            
             # Find a meditation video URL using OpenAI
-            youtube_url, source_info = await self.openai_agent.find_meditation(mood, language)
+            youtube_url, source_info = await self.openai_agent.find_meditation(
+                mood, 
+                language,
+                watched_videos=watched_videos
+            )
             
             # Add mood to the metadata for feedback
             if source_info:
@@ -76,15 +86,8 @@ class MeditationOrchestrator:
                 # Store current meditation for feedback collection
                 self.current_meditation = track_metadata
             
-            # Save the meditation session to the database immediately
-            await save_meditation_session(
-                mood=mood,
-                language=language,
-                youtube_url=youtube_url,
-                audio_url=None
-            )
-            
-            logger.info(f"Found and saved meditation video URL: {youtube_url}")
+            # Note: We don't save to database here anymore, it will be saved when watching is complete
+            logger.info(f"Found meditation video URL: {youtube_url}")
             
             # Return the YouTube URL and metadata
             return youtube_url, source_info
@@ -184,4 +187,39 @@ class MeditationOrchestrator:
         os.makedirs(fallback_dir, exist_ok=True)
         
         # Use our simplest fallback
-        return str(Path(__file__).parent.parent / "assets" / "fallback_meditation.mp3") 
+        return str(Path(__file__).parent.parent / "assets" / "fallback_meditation.mp3")
+    
+    async def save_completed_meditation(self, user_id=None):
+        """
+        Save the current meditation to the database after it has been watched.
+        
+        Args:
+            user_id: Optional user identifier
+            
+        Returns:
+            Boolean indicating success
+        """
+        if not self.current_meditation:
+            logger.warning("No current meditation data available to save")
+            return False
+        
+        try:
+            # Extract data from current meditation
+            mood = self.current_meditation.get('mood', 'unknown')
+            youtube_url = self.current_meditation.get('youtube_url', None)
+            
+            # Save the meditation session to the database
+            await save_meditation_session(
+                mood=mood,
+                language=self.language,
+                youtube_url=youtube_url,
+                audio_url=None,
+                user_id=user_id
+            )
+            
+            logger.info(f"Saved completed meditation with URL: {youtube_url}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error saving completed meditation: {str(e)}")
+            return False 

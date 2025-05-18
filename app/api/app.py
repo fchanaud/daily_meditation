@@ -13,6 +13,7 @@ from typing import List, Dict, Optional, Any
 from app.agents.orchestrator import MeditationOrchestrator
 import time
 import logging
+from datetime import datetime
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -98,15 +99,15 @@ async def generate_meditation(request: MeditationRequest, user_id: str = Depends
     The API will:
     1. Use OpenAI to find a suitable YouTube meditation video matching the mood (8-15 minutes long)
     2. Return the YouTube URL directly for the frontend to handle
-    3. Store the URL in the database
     
     Returns JSON with YouTube URL and metadata.
     """
     try:
-        # Find a meditation using our orchestrator
+        # Find a meditation using our orchestrator - pass user_id to avoid showing already watched videos
         youtube_url, source_info = await meditation_orchestrator.generate_meditation(
             request.mood, 
-            language=request.language
+            language=request.language,
+            user_id=user_id
         )
         
         # Check if feedback should be collected
@@ -171,6 +172,36 @@ async def submit_feedback(feedback: FeedbackResponse, user_id: str = Depends(get
         logging.error(f"Error saving feedback: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to save feedback: {str(e)}")
 
+@app.post("/save-completed-meditation")
+async def save_completed_meditation(user_id: str = Depends(get_user_id)):
+    """
+    Save a meditation as completed after the user has finished watching.
+    
+    Args:
+        user_id: The user identifier (from cookie)
+        
+    Returns:
+        JSON response confirming the meditation was saved
+    """
+    try:
+        # Save the completed meditation
+        success = await meditation_orchestrator.save_completed_meditation(user_id)
+        
+        if success:
+            return {
+                "status": "success",
+                "message": "Meditation saved successfully."
+            }
+        else:
+            return {
+                "status": "error",
+                "message": "Could not save meditation data."
+            }
+    except Exception as e:
+        # For debugging purposes, log the error
+        logging.error(f"Error saving completed meditation: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to save meditation: {str(e)}")
+
 @app.get("/available-moods")
 async def available_moods():
     """
@@ -189,4 +220,11 @@ async def available_languages():
     Get the list of available languages for meditation audio.
     """
     languages = ["english", "french"]
-    return {"languages": languages} 
+    return {"languages": languages}
+
+@app.get("/ping")
+async def ping():
+    """
+    Simple endpoint for uptime monitoring to prevent the app from sleeping on render free plan.
+    """
+    return {"status": "alive", "timestamp": datetime.now().isoformat()} 

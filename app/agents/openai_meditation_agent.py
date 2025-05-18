@@ -53,13 +53,14 @@ class OpenAIMeditationAgent:
             "https://www.youtube.com/watch?v=1ZYbU82GVz4"   # Calm meditation
         ]
     
-    async def find_meditation(self, mood: str, language: str = "english") -> Tuple[str, Dict]:
+    async def find_meditation(self, mood: str, language: str = "english", watched_videos: List[str] = None) -> Tuple[str, Dict]:
         """
         Find a meditation video URL matching the mood using OpenAI.
         
         Args:
             mood: The mood to search for
             language: Preferred language for the meditation
+            watched_videos: List of previously watched video URLs to avoid
             
         Returns:
             Tuple of (URL of a meditation video, source_info dict)
@@ -68,12 +69,23 @@ class OpenAIMeditationAgent:
         mood = mood.lower().strip()
         language = language.lower().strip()
         
+        # Initialize watched videos list if not provided
+        if watched_videos is None:
+            watched_videos = []
+        
         # Create minimal prompt based on mood and language
         prompt = self.prompt_template.format(
             duration="8-15",
             mood=mood,
             language=language
         )
+        
+        # If we have watched videos, add instruction to avoid them
+        if watched_videos and len(watched_videos) > 0:
+            # Take up to 3 most recent watched videos to keep prompt short
+            recent_watched = watched_videos[:3]
+            avoid_prompt = " Do not return these previously watched URLs: " + ", ".join(recent_watched)
+            prompt += avoid_prompt
         
         logger.info(f"Generating OpenAI prompt for mood: {mood}, language: {language}")
         
@@ -92,6 +104,15 @@ class OpenAIMeditationAgent:
                 
                 if youtube_url:
                     logger.info(f"Found YouTube meditation: {youtube_url}")
+                    
+                    # Check if this URL is in the watched videos list
+                    if youtube_url in watched_videos:
+                        logger.warning(f"YouTube video was already watched: {youtube_url} (attempt {attempts}/{max_attempts})")
+                        # Add information to prompt to avoid returning the same URL
+                        prompt += f" Do not return {youtube_url} as it was already watched."
+                        # Short delay before trying again
+                        await asyncio.sleep(0.5)
+                        continue
                     
                     # Validate the YouTube URL
                     is_valid = await self._validate_youtube_url(youtube_url)
@@ -123,6 +144,12 @@ class OpenAIMeditationAgent:
                 
         # If we've exhausted all attempts, return a fallback URL
         fallback_url = self._get_fallback_url()
+        # Make sure the fallback is not in watched videos
+        for _ in range(5):  # Try up to 5 times to find an unwatched fallback
+            if fallback_url not in watched_videos:
+                break
+            fallback_url = self._get_fallback_url()
+            
         logger.warning(f"Exhausted all validation attempts, using fallback URL: {fallback_url}")
         
         return fallback_url, {

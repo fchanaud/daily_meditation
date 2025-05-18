@@ -35,31 +35,8 @@
                     </div>
                 </div>
 
-                <div class="card mb-4">
-                    <div class="card-header bg-primary text-white">
-                        <h3 class="mb-0">Select language</h3>
-                    </div>
-                    <div class="card-body">
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="language" id="language-english" value="english" checked>
-                            <label class="form-check-label" for="language-english">
-                                English
-                            </label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="radio" name="language" id="language-french" value="french">
-                            <label class="form-check-label" for="language-french">
-                                French
-                            </label>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mb-4 text-center">
-                    <button type="submit" id="submit-btn" class="btn btn-lg btn-primary" disabled>
-                        Find My Meditation
-                    </button>
-                </div>
+                <!-- Hidden language field - always use English by default -->
+                <input type="hidden" name="language" id="language-english" value="english">
             </form>
         </div>
     </div>
@@ -71,16 +48,6 @@
                 <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated bg-primary" role="progressbar" style="width: 0%"></div>
             </div>
             <p id="progress-stage" class="text-center mt-2">Searching for the perfect meditation...</p>
-        </div>
-    </div>
-
-    <!-- Response message -->
-    <div id="response-container" class="row mb-4" style="display: none;">
-        <div class="col-lg-8 offset-lg-2">
-            <div class="alert alert-success">
-                <h4 id="response-message">Your meditation is ready!</h4>
-                <p id="response-note">Find a quiet place, sit comfortably, and breathe deeply as you listen.</p>
-            </div>
         </div>
     </div>
 
@@ -194,6 +161,7 @@
     let youtubePlayer = null;
     let shouldShowFeedbackAfterVideo = false;
     let feedbackQuestionsForYoutube = [];
+    let currentMeditationUrl = null;
     
     // YouTube Player API callback
     function onYouTubeIframeAPIReady() {
@@ -254,17 +222,14 @@
     document.addEventListener('DOMContentLoaded', function() {
         // Elements
         const moodCards = document.querySelectorAll('.mood-card');
-        const submitButton = document.getElementById('submit-btn');
         const progressContainer = document.getElementById('progress-container');
         const progressBar = document.getElementById('progress-bar');
         const progressStage = document.getElementById('progress-stage');
-        const responseContainer = document.getElementById('response-container');
-        const responseMessage = document.getElementById('response-message');
-        const responseNote = document.getElementById('response-note');
         const feedbackContainer = document.getElementById('feedback-container');
         const feedbackForm = document.getElementById('feedback-form');
         const feedbackSuccess = document.getElementById('feedback-success');
         const additionalQuestionsContainer = document.getElementById('additional-questions-container');
+        const showFeedbackBtn = document.getElementById('show-feedback-btn');
         
         // Rating stars functionality
         const ratingStars = document.querySelectorAll('.rating-star');
@@ -281,49 +246,22 @@
             });
         });
         
-        // Handle mood card selection
-        moodCards.forEach(card => {
-            card.addEventListener('click', function() {
-                // Remove selected class from all cards
-                moodCards.forEach(c => c.classList.remove('selected'));
-                
-                // Add selected class to clicked card
-                this.classList.add('selected');
-                
-                // Check the radio button
-                const moodValue = this.dataset.mood;
-                const radio = document.getElementById('mood-' + moodValue);
-                radio.checked = true;
-                
-                // Enable the submit button
-                submitButton.disabled = false;
-            });
-        });
-        
-        // Form submission handler
-        document.getElementById('mood-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            // Get selected mood and language
-            const selectedMood = document.querySelector('input[name="mood"]:checked').value;
-            const selectedLanguage = document.querySelector('input[name="language"]:checked').value;
+        // Function to handle meditation submission
+        function submitMeditation(selectedMood) {
+            // Always use English
+            const selectedLanguage = "english";
             
             // Show loading state
-            submitButton.disabled = true;
-            submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
-            
-            // Reset progress bar
             progressBar.style.width = '0%';
             progressStage.textContent = 'Searching for the perfect meditation...';
             progressContainer.style.display = 'block';
             
-            // Hide any previous response
-            responseContainer.style.display = 'none';
+            // Hide any previous content
             document.getElementById('youtube-player-container').style.display = 'none';
             feedbackContainer.style.display = 'none';
             feedbackSuccess.style.display = 'none';
             
-            // Simulate progress updates (since we can't get real-time updates from the server)
+            // Simulate progress updates
             let progress = 0;
             const progressStages = [
                 'Asking OpenAI to find a meditation video for your mood...',
@@ -375,23 +313,17 @@
                 progressBar.style.width = '100%';
                 progressStage.textContent = 'Your meditation is ready!';
                 
-                // Display the response message
-                responseMessage.textContent = data.message || 'Meditation selection successful';
-                if (data.note) {
-                    responseNote.textContent = data.note;
-                }
-                
                 // Set up YouTube embed if available 
                 if (data.youtube_url) {
                     console.log('Setting YouTube URL:', data.youtube_url);
+                    currentMeditationUrl = data.youtube_url;
                     
                     // Get YouTube container and elements
                     const youtubeContainer = document.getElementById('youtube-player-container');
                     const youtubeTitle = document.getElementById('youtube-title');
-                    const showFeedbackBtn = document.getElementById('show-feedback-btn');
                     
-                    // Set the title
-                    youtubeTitle.textContent = 'Your Meditation Video';
+                    // Set the title to include the mood
+                    youtubeTitle.textContent = `Your ${data.mood.charAt(0).toUpperCase() + data.mood.slice(1)} Meditation`;
                     
                     // Extract YouTube video ID and create player
                     const videoId = getYouTubeVideoId(data.youtube_url);
@@ -403,34 +335,21 @@
                     shouldShowFeedbackAfterVideo = data.should_show_feedback;
                     feedbackQuestionsForYoutube = data.feedback_questions || [];
                     
-                    // Add event listener to the feedback button
-                    showFeedbackBtn.addEventListener('click', function() {
-                        if (shouldShowFeedbackAfterVideo) {
-                            showFeedbackForm(feedbackQuestionsForYoutube);
-                        }
-                    });
-                    
                     // Show the YouTube container
                     youtubeContainer.style.display = 'block';
+                    
+                    // Hide progress bar
+                    setTimeout(() => {
+                        progressContainer.style.display = 'none';
+                    }, 1000);
+                    
+                    // Immediately scroll to the YouTube video player
+                    youtubeContainer.scrollIntoView({ behavior: 'smooth' });
                 } else {
                     // No video found
                     alert('No suitable meditation video was found. Please try a different mood.');
-                }
-                
-                // Show the response container
-                responseContainer.style.display = 'block';
-                
-                // Reset the button
-                submitButton.disabled = false;
-                submitButton.innerHTML = 'Find My Meditation';
-                
-                // Hide progress bar after a delay
-                setTimeout(() => {
                     progressContainer.style.display = 'none';
-                }, 2000);
-                
-                // Scroll to the response
-                responseContainer.scrollIntoView({ behavior: 'smooth' });
+                }
             })
             .catch(error => {
                 console.error('Error:', error);
@@ -443,10 +362,53 @@
                 
                 // Show error message
                 alert('Failed to generate meditation. Please try again.');
+            });
+        }
+        
+        // Handle mood card selection - auto submit when clicked
+        moodCards.forEach(card => {
+            card.addEventListener('click', function() {
+                // Remove selected class from all cards
+                moodCards.forEach(c => c.classList.remove('selected'));
                 
-                // Reset the button
-                submitButton.disabled = false;
-                submitButton.innerHTML = 'Find My Meditation';
+                // Add selected class to clicked card
+                this.classList.add('selected');
+                
+                // Get the selected mood
+                const selectedMood = this.dataset.mood;
+                
+                // Check the radio button
+                const radio = document.getElementById('mood-' + selectedMood);
+                radio.checked = true;
+                
+                // Automatically submit the form with this mood
+                submitMeditation(selectedMood);
+            });
+        });
+        
+        // Add event listener for the "I've finished watching" button
+        showFeedbackBtn.addEventListener('click', function() {
+            // Save the completed meditation when user clicks this button
+            fetch('/save-completed-meditation', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Meditation saved:', data);
+                // Now show the feedback form if applicable
+                if (shouldShowFeedbackAfterVideo) {
+                    showFeedbackForm(feedbackQuestionsForYoutube);
+                }
+            })
+            .catch(error => {
+                console.error('Error saving meditation:', error);
+                // Still show feedback even if saving fails
+                if (shouldShowFeedbackAfterVideo) {
+                    showFeedbackForm(feedbackQuestionsForYoutube);
+                }
             });
         });
         

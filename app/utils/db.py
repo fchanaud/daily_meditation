@@ -43,7 +43,7 @@ def init_supabase():
         logger.error(f"Failed to initialize Supabase client: {str(e)}")
         return False
 
-async def save_meditation_session(mood, language, youtube_url=None, audio_url=None):
+async def save_meditation_session(mood, language, youtube_url=None, audio_url=None, user_id=None):
     """
     Save a meditation session to Supabase.
     
@@ -52,6 +52,7 @@ async def save_meditation_session(mood, language, youtube_url=None, audio_url=No
         language: The language of the meditation
         youtube_url: URL of the YouTube video (if available)
         audio_url: URL of the audio file
+        user_id: Optional user ID to associate with this session
         
     Returns:
         Boolean indicating success
@@ -71,6 +72,10 @@ async def save_meditation_session(mood, language, youtube_url=None, audio_url=No
             "audio_url": audio_url,
             "created_at": datetime.now().isoformat(),
         }
+        
+        # Add user_id if provided
+        if user_id:
+            session_data["user_id"] = user_id
         
         # Insert data into the meditation_sessions table with error handling for both API versions
         try:
@@ -202,6 +207,75 @@ async def check_meditation_today():
     except Exception as e:
         logger.error(f"Error checking today's meditation: {str(e)}")
         return False
+
+async def get_user_watched_videos(user_id=None, days=30):
+    """
+    Get a list of YouTube URLs that the user has already watched.
+    
+    Args:
+        user_id: User identifier (optional)
+        days: Number of days to look back in history
+        
+    Returns:
+        List of YouTube URLs the user has watched
+    """
+    if not supabase:
+        if not init_supabase():
+            return []
+    
+    try:
+        # Calculate date for looking back
+        lookback_date = (datetime.now() - timedelta(days=days)).isoformat()
+        
+        # Base query
+        query = supabase.table("meditation_sessions") \
+            .select("youtube_url") \
+            .gte("created_at", lookback_date) \
+            .not_is("youtube_url", "null")
+        
+        # Add user filter if provided
+        if user_id:
+            query = query.eq("user_id", user_id)
+        
+        # Try execute with compatibility for both versions
+        try:
+            response = query.execute()
+            
+            if hasattr(response, 'data'):
+                # Extract YouTube URLs from response
+                urls = [item.get('youtube_url') for item in response.data if item.get('youtube_url')]
+                return urls
+            else:
+                # For newer versions that might return data differently
+                urls = [item.get('youtube_url') for item in response if item.get('youtube_url')]
+                return urls
+        except Exception as query_error:
+            # Try alternative method for newer versions
+            logger.warning(f"First query method failed: {str(query_error)}")
+            try:
+                query = supabase.from_("meditation_sessions") \
+                    .select("youtube_url") \
+                    .gte("created_at", lookback_date) \
+                    .not_is("youtube_url", "null")
+                
+                if user_id:
+                    query = query.eq("user_id", user_id)
+                    
+                response = query.execute()
+                
+                if hasattr(response, 'data'):
+                    urls = [item.get('youtube_url') for item in response.data if item.get('youtube_url')]
+                    return urls
+                else:
+                    urls = [item.get('youtube_url') for item in response if item.get('youtube_url')]
+                    return urls
+            except Exception as alt_error:
+                logger.error(f"Alternative query method failed: {str(alt_error)}")
+                return []
+            
+    except Exception as e:
+        logger.error(f"Error retrieving watched videos: {str(e)}")
+        return []
 
 # Initialize Supabase when the module is imported
 init_supabase() 
